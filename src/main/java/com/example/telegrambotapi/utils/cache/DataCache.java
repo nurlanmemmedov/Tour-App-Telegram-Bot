@@ -8,7 +8,7 @@ public interface DataCache {
 
     Question getUsersCurrentBotState(int id);
 
-    TourRequestDto getUserProfileData(int id);
+    TourRequestDto getUserTourRequestData(int id);
 
-    void saveUserProfileData(int id, TourRequestDto tourRequestData);
+    void saveUserTourRequest(int id, TourRequestDto tourRequestData);
 }
