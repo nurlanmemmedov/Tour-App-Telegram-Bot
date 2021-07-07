@@ -23,3 +23,5 @@ public class Question {
             cascade = CascadeType.ALL)
     private List<Action> actions;
 }
+
+
