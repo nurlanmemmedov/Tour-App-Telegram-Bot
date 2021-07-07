@@ -4,11 +4,11 @@ import com.example.telegrambotapi.dtos.TourRequestDto;
 import com.example.telegrambotapi.models.Question;
 
 public interface DataCache {
-    void setUsersCurrentBotState(int id, Question question);
+    void setUsersCurrentBotState(String id, Question question);
 
-    Question getUsersCurrentBotState(int id);
+    Question getUsersCurrentBotState(String id);
 
-    TourRequestDto getUserTourRequestData(int id);
+    TourRequestDto getUserTourRequestData(String id);
 
-    void saveUserTourRequest(int id, TourRequestDto tourRequestData);
+    void saveUserTourRequest(String id, TourRequestDto tourRequestData);
 }
