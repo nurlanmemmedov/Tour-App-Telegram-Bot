@@ -1,5 +1,6 @@
 package com.example.telegrambotapi.models;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,6 +15,8 @@ public class QuestionTranslation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+
+    @JsonManagedReference
     @ManyToOne
     @JoinColumn(name="question_id", nullable=false)
     private Question question;
