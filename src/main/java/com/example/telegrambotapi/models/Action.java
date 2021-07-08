@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.util.List;
 
 @Entity
 @Data
@@ -24,4 +25,16 @@ public class Action {
     @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
     @JoinColumn(name = "next_id", referencedColumnName = "id")
     private Question nextQuestion;
+    @OneToMany(mappedBy = "action",
+            fetch = FetchType.LAZY,
+            cascade = CascadeType.ALL)
+    private List<ActionTranslation> actionTranslations;
+
+    public String getAnswer(String code) {
+        ActionTranslation translation =  actionTranslations.stream()
+                .filter(t -> t.getCode().equals(code))
+                .findFirst().orElse(null);
+        if (translation == null) return this.answer;
+        return translation.getText();
+    }
 }

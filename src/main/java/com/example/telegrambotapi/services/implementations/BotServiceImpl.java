@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 @Component
 @Slf4j
-public class TelegramFacade {
+public class BotServiceImpl implements BotService{
 
     @Autowired
     private QuestionRepository repository;
@@ -33,10 +33,11 @@ public class TelegramFacade {
     private ActionRepository actionRepository;
     private DataCache cache;
 
-    public TelegramFacade(DataCache cache){
+    public BotServiceImpl(DataCache cache){
         this.cache = cache;
     }
 
+    @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
         if (update.hasCallbackQuery())
@@ -44,6 +45,11 @@ public class TelegramFacade {
             String chatId = update.getCallbackQuery().getFrom().getId().toString();
             String answer = update.getCallbackQuery().getData();
             Question question = cache.getUsersCurrentBotState(chatId);
+            // LANGUAGE
+            if (question.getId() == 1){
+                cache.setSelectedLanguage(answer);
+            }
+
             //TODO
             Action action = question.getActions().stream()
                     .filter(a -> a.getAnswer().equals(answer)).collect(Collectors.toList()).get(0);
@@ -74,15 +80,15 @@ public class TelegramFacade {
         cache.setUsersCurrentBotState(chatId, question);
         boolean hasButton = question.getActions().stream().anyMatch(a -> a.getType() == ActionType.BUTTON);
         if (hasButton){
-            return new SendMessage(chatId, question.getQuestionText()).setReplyMarkup(getButtons(hasButton?question:null));
+            return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage())).setReplyMarkup(getButtons(hasButton?question:null));
         }
-        return new SendMessage(chatId, question.getQuestionText());
+        return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage()));
     }
 
     private InlineKeyboardMarkup getButtons(Question question){
         List<InlineKeyboardButton> keyboardButtonsRow1 = new ArrayList<>();
         question.getActions().stream().forEach(a -> {
-            InlineKeyboardButton button = new InlineKeyboardButton().setText(a.getAnswer());
+            InlineKeyboardButton button = new InlineKeyboardButton().setText(a.getAnswer(cache.getSelectedLanguage()));
             button.setCallbackData(a.getAnswer());
             keyboardButtonsRow1.add(button);
         });
