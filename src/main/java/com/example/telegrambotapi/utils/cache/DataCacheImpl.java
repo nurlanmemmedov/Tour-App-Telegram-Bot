@@ -12,8 +12,8 @@ import java.util.Map;
 public class DataCacheImpl implements DataCache{
 
     private Map<String, Question> usersBotStates = new HashMap<>();
-    private Map<Question, Map<Integer, Action>> userAnswerStates = new HashMap<>();
-    private Map<String, TourRequestDto> userTourRequests = new HashMap<>();
+    private Map<String, Map<Integer, String>> userData = new HashMap<>();
+    private Map<String, String> userLanguage = new HashMap<>();
 
     @Override
     public void setUsersCurrentBotState(String id, Question question) {
@@ -26,12 +26,30 @@ public class DataCacheImpl implements DataCache{
     }
 
     @Override
-    public TourRequestDto getUserTourRequestData(String id) {
-        return userTourRequests.get(id);
+    public void saveUserData(String id, Integer questionId, String answer){
+        if (userData.get(id) == null){
+            Map<Integer, String> answerMap = new HashMap<>();
+            answerMap.put(questionId, answer);
+            userData.put(id, answerMap);
+        }
+        Map<Integer, String> answerMap  = userData.get(id);
+        answerMap.put(questionId, answer);
+
     }
 
     @Override
-    public void saveUserTourRequest(String id, TourRequestDto tourRequestData) {
-        userTourRequests.put(id, tourRequestData);
+    public Map<Integer, String> getUserData(String id){
+        return userData.get(id);
+    }
+
+
+    @Override
+    public void setSelectedLanguage(String id, String code){
+        userLanguage.put(id, code);
+    }
+
+    @Override
+    public String getSelectedLanguage(String id){
+        return userLanguage.get(id);
     }
 }

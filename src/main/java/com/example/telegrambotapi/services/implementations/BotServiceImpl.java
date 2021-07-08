@@ -1,15 +1,12 @@
-package com.example.telegrambotapi.bot;
-
-
+package com.example.telegrambotapi.services.implementations;
 import com.example.telegrambotapi.enums.ActionType;
 import com.example.telegrambotapi.models.Action;
 import com.example.telegrambotapi.models.Question;
-import com.example.telegrambotapi.repositories.ActionRepository;
 import com.example.telegrambotapi.repositories.QuestionRepository;
+import com.example.telegrambotapi.services.BotService;
 import com.example.telegrambotapi.utils.cache.DataCache;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -19,22 +16,19 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
 @Slf4j
-public class BotServiceImpl implements BotService{
+public class BotServiceImpl implements BotService {
 
-    @Autowired
     private QuestionRepository repository;
-    @Autowired
-    private ActionRepository actionRepository;
     private DataCache cache;
 
-    public BotServiceImpl(DataCache cache){
+    public BotServiceImpl(DataCache cache, QuestionRepository repository){
         this.cache = cache;
+        this.repository = repository;
     }
 
     @Override
@@ -45,9 +39,12 @@ public class BotServiceImpl implements BotService{
             String chatId = update.getCallbackQuery().getFrom().getId().toString();
             String answer = update.getCallbackQuery().getData();
             Question question = cache.getUsersCurrentBotState(chatId);
+
+            cache.saveUserData(chatId, question.getId(),answer);
+
             // LANGUAGE
             if (question.getId() == 1){
-                cache.setSelectedLanguage(answer);
+                cache.setSelectedLanguage(chatId, answer);
             }
 
             //TODO
@@ -60,12 +57,14 @@ public class BotServiceImpl implements BotService{
             return giveQuestion(message.getChatId().toString(), 1);
         }
         if (message != null && message.hasText()){
-            System.out.println(message.getText());
             String chatId = message.getChatId().toString();
             Question question = cache.getUsersCurrentBotState(chatId);
 
+
+
             if (question != null){
-                System.out.println(question.getActions().size());
+                cache.saveUserData(chatId, question.getId(), message.getText());
+                System.out.println(cache.getUserData(chatId));
                 Action action = question.getActions().get(0);
                 return giveQuestion(chatId, action.getNextQuestion().getId());
             }
@@ -73,28 +72,31 @@ public class BotServiceImpl implements BotService{
         return null;
     }
 
-
     @SneakyThrows
     private BotApiMethod<?> giveQuestion(String chatId, int questionId){
         Question question = repository.getById(questionId);
         cache.setUsersCurrentBotState(chatId, question);
-        boolean hasButton = question.getActions().stream().anyMatch(a -> a.getType() == ActionType.BUTTON);
+        boolean hasButton = question.getActions().stream()
+                .anyMatch(a -> a.getType() == ActionType.BUTTON);
         if (hasButton){
-            return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage())).setReplyMarkup(getButtons(hasButton?question:null));
+            return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(chatId)))
+                    .setReplyMarkup(getButtons(chatId, hasButton?question:null));
         }
-        return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage()));
+        return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(chatId)));
     }
 
-    private InlineKeyboardMarkup getButtons(Question question){
-        List<InlineKeyboardButton> keyboardButtonsRow1 = new ArrayList<>();
+    private InlineKeyboardMarkup getButtons(String chatId, Question question){
+
+        List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
         question.getActions().stream().forEach(a -> {
-            InlineKeyboardButton button = new InlineKeyboardButton().setText(a.getAnswer(cache.getSelectedLanguage()));
+            InlineKeyboardButton button = new InlineKeyboardButton()
+                    .setText(a.getAnswer(cache.getSelectedLanguage(chatId)));
             button.setCallbackData(a.getAnswer());
-            keyboardButtonsRow1.add(button);
+            keyboardButtonsRow.add(button);
         });
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
-        rowList.add(keyboardButtonsRow1);
+        rowList.add(keyboardButtonsRow);
         inlineKeyboardMarkup.setKeyboard(rowList);
         return inlineKeyboardMarkup;
     }
