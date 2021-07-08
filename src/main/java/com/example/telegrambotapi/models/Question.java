@@ -3,6 +3,8 @@ package com.example.telegrambotapi.models;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 
 import javax.persistence.*;
 import java.util.Dictionary;
@@ -19,12 +21,14 @@ public class Question {
     private int id;
     @Column(name = "question_text")
     private String questionText;
+
+    @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "question",
-            fetch = FetchType.LAZY,
             cascade = CascadeType.ALL)
     private List<Action> actions;
+
+    @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "question",
-            fetch = FetchType.LAZY,
             cascade = CascadeType.ALL)
     private List<QuestionTranslation> questionTranslations;
 

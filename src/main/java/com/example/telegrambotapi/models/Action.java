@@ -1,9 +1,12 @@
 package com.example.telegrambotapi.models;
 
 import com.example.telegrambotapi.enums.ActionType;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 
 import javax.persistence.*;
 import java.util.List;
@@ -22,11 +25,14 @@ public class Action {
     private Question question;
     private ActionType type;
     private String answer;
+
+    @JsonManagedReference
     @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
     @JoinColumn(name = "next_id", referencedColumnName = "id")
     private Question nextQuestion;
+
+    @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "action",
-            fetch = FetchType.LAZY,
             cascade = CascadeType.ALL)
     private List<ActionTranslation> actionTranslations;
 

@@ -3,6 +3,7 @@ package com.example.telegrambotapi.utils.cache;
 import com.example.telegrambotapi.dtos.TourRequestDto;
 import com.example.telegrambotapi.models.Question;
 
+import java.util.List;
 import java.util.Map;
 
 public interface DataCache {
@@ -17,4 +18,8 @@ public interface DataCache {
     void setSelectedLanguage(String id, String code);
 
     String getSelectedLanguage(String id);
+
+    void setQuestions(String id);
+
+    Map<Integer, Question>  getQuestion(String id);
 }
