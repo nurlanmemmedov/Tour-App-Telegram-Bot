@@ -3,12 +3,18 @@ package com.example.telegrambotapi.utils.cache;
 import com.example.telegrambotapi.dtos.TourRequestDto;
 import com.example.telegrambotapi.models.Question;
 
+import java.util.Map;
+
 public interface DataCache {
     void setUsersCurrentBotState(String id, Question question);
 
     Question getUsersCurrentBotState(String id);
 
-    TourRequestDto getUserTourRequestData(String id);
+    void saveUserData(String id, Integer questionId, String answer);
 
-    void saveUserTourRequest(String id, TourRequestDto tourRequestData);
+    Map<Integer, String> getUserData(String id);
+
+    void setSelectedLanguage(String id, String code);
+
+    String getSelectedLanguage(String id);
 }
