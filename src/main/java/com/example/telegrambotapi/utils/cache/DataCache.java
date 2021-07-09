@@ -15,11 +15,14 @@ public interface DataCache {
 
     Map<Integer, String> getUserData(String id);
 
+    void removeUserData(String id);
+
     void setSelectedLanguage(String id, String code);
 
     String getSelectedLanguage(String id);
 
     void setQuestions(String id);
+
 
     Map<Integer, Question>  getQuestion(String id);
 }

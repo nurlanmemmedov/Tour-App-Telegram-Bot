@@ -73,10 +73,21 @@ public class BotServiceImpl implements BotService {
     }
 
     private BotApiMethod<?> handleCommands(Message message){
+        String chatId = message.getChatId().toString();
         if (message.getText().equals("/start")){
-            cache.setQuestions(message.getChatId().toString());
+            if (cache.getUserData(chatId) != null){
+                return new SendMessage(chatId, "You have active session, please type /stop to restart");
+            }
+            cache.setQuestions(chatId);
+            return giveQuestion(chatId, 1);
         }
-        return giveQuestion(message.getChatId().toString(), 1);
+        else if (message.getText().equals("/stop")){
+            cache.removeUserData(chatId);
+            System.out.println(cache.getUserData(chatId));
+            System.out.println(cache.getUserData(chatId) == null);
+            return new SendMessage(chatId, "Your session was removed, you can restart with typing /start");
+        }
+        return new SendMessage(chatId, "Incorrect command");
     }
 
     private BotApiMethod<?> handleCallbackQuery(CallbackQuery callbackQuery){
