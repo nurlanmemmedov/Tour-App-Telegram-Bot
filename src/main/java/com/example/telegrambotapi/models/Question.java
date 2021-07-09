@@ -22,6 +22,12 @@ public class Question {
     @Column(name = "question_text")
     private String questionText;
 
+    @Column(name = "question_key")
+    private String questionKey;
+
+    @Column(name = "regex")
+    private String regex;
+
     @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "question",
             cascade = CascadeType.ALL)
