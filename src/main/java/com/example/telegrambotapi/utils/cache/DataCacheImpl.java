@@ -52,6 +52,11 @@ public class DataCacheImpl implements DataCache{
     }
 
     @Override
+    public void removeUserData(String id){
+        userData.remove(id);
+    }
+
+    @Override
     public void setSelectedLanguage(String id, String code){
         userLanguage.put(id, code);
     }
