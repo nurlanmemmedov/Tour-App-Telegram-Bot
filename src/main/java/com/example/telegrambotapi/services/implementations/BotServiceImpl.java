@@ -9,16 +9,18 @@ import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.example.telegrambotapi.utils.Validator.*;
 
 @Component
 public class BotServiceImpl implements BotService {
@@ -34,7 +36,6 @@ public class BotServiceImpl implements BotService {
     @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
-        if (update.hasCallbackQuery()) return handleCallbackQuery(update.getCallbackQuery());
         Message message = update.getMessage();
         if (message == null) return null;
         if (message.getText().startsWith("/")){
@@ -58,18 +59,18 @@ public class BotServiceImpl implements BotService {
         return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(chatId)));
     }
 
-    private InlineKeyboardMarkup getButtons(String chatId, Question question){
-        List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
+    private ReplyKeyboardMarkup getButtons(String chatId, Question question){
+        List<KeyboardRow> keyboardButtonsRow= new ArrayList<>();
         question.getActions().stream().forEach(a -> {
-            InlineKeyboardButton button = new InlineKeyboardButton().setText(a.getAnswer(cache.getSelectedLanguage(chatId)));
-            button.setCallbackData(a.getAnswer());
-            keyboardButtonsRow.add(button);
+            KeyboardRow row = new KeyboardRow();
+            KeyboardButton button = new KeyboardButton().setText(a.getAnswer(cache.getSelectedLanguage(chatId)));
+            row.add(button);
+            keyboardButtonsRow.add(row);
         });
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
-        rowList.add(keyboardButtonsRow);
-        inlineKeyboardMarkup.setKeyboard(rowList);
-        return inlineKeyboardMarkup;
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setOneTimeKeyboard(true);
+        replyKeyboardMarkup.setKeyboard(keyboardButtonsRow);
+        return replyKeyboardMarkup;
     }
 
     private BotApiMethod<?> handleCommands(Message message){
@@ -90,28 +91,14 @@ public class BotServiceImpl implements BotService {
         return new SendMessage(chatId, "Incorrect command");
     }
 
-    private BotApiMethod<?> handleCallbackQuery(CallbackQuery callbackQuery){
-        String chatId = callbackQuery.getFrom().getId().toString();
-        String answer = callbackQuery.getData();
-        Question question = cache.getUsersCurrentBotState(chatId);
-
-        cache.saveUserData(chatId, question.getId(),answer);
-
-        // LANGUAGE
-        if (question.getId() == 1){
-            cache.setSelectedLanguage(chatId, answer);
-        }
-
-        //TODO
-        Action action = question.getActions().stream()
-                .filter(a -> a.getAnswer().equals(answer)).findFirst().get();
-        return giveQuestion(chatId, action.getNextQuestion().getId());
-    }
-
     private BotApiMethod<?> handleTextMessage(Message message){
         String chatId = message.getChatId().toString();
         Question question = cache.getUsersCurrentBotState(chatId);
         if (question == null) return null;
+        if (question.getId() == 1){
+            cache.setSelectedLanguage(chatId, message.getText());
+        }
+        if (!validate(question, message.getText())) return new SendMessage(chatId, "Incorrect answer");
         cache.saveUserData(chatId, question.getId(), message.getText());
         System.out.println(cache.getUserData(chatId));
         Action action = question.getActions().stream().findFirst().orElse(null);//TODO
