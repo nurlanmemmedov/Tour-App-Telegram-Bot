@@ -1,25 +1,28 @@
 package com.example.telegrambotapi.utils.cache;
 
-import com.example.telegrambotapi.dtos.TourRequestDto;
-import com.example.telegrambotapi.models.Question;
+import com.example.telegrambotapi.models.entities.Question;
+import org.telegram.telegrambots.meta.api.objects.Message;
 
-import java.util.List;
 import java.util.Map;
 
 public interface DataCache {
-    void setUsersCurrentBotState(String id, Question question);
+    void setUserActiveSession(Message message);
 
-    Question getUsersCurrentBotState(String id);
+    void removeSession(Integer clientId);
 
-    void saveUserData(String id, Integer questionId, String answer);
+    void setUsersCurrentBotState(Integer clientId, Question question);
 
-    Map<Integer, String> getUserData(String id);
+    Question getUsersCurrentBotState(Integer clientId);
 
-    void removeUserData(String id);
+    void saveUserData(Integer clientId, String key, String answer);
 
-    void setSelectedLanguage(String id, String code);
+    Map<String, String> getUserData(Integer clientIdd);
 
-    String getSelectedLanguage(String id);
+    void removeUserData(Integer clientId);
+
+    void setSelectedLanguage(Integer clientId, String code);
+
+    String getSelectedLanguage(Integer clientId);
 
     void setQuestions(String id);
 

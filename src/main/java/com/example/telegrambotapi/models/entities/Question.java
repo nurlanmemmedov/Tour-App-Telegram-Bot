@@ -1,4 +1,4 @@
-package com.example.telegrambotapi.models;
+package com.example.telegrambotapi.models.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,6 @@ import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.LazyCollectionOption;
 
 import javax.persistence.*;
-import java.util.Dictionary;
 import java.util.List;
 
 @Entity

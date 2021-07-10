@@ -1,4 +1,4 @@
-package com.example.telegrambotapi.models;
+package com.example.telegrambotapi.models.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

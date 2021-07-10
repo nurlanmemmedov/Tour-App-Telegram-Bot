@@ -1,7 +1,7 @@
 package com.example.telegrambotapi.services.implementations;
 import com.example.telegrambotapi.enums.ActionType;
-import com.example.telegrambotapi.models.Action;
-import com.example.telegrambotapi.models.Question;
+import com.example.telegrambotapi.models.entities.Action;
+import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.repositories.QuestionRepository;
 import com.example.telegrambotapi.services.BotService;
 import com.example.telegrambotapi.utils.cache.DataCache;
@@ -18,7 +18,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static com.example.telegrambotapi.utils.Validator.*;
 
@@ -45,25 +44,29 @@ public class BotServiceImpl implements BotService {
     }
 
     @SneakyThrows
-    private BotApiMethod<?> giveQuestion(String chatId, int questionId){
+    private BotApiMethod<?> giveQuestion(Message message, int questionId){
+        String chatId = message.getChatId().toString();
         Map<Integer, Question> questionMap = cache.getQuestion(chatId);
         Question question = questionMap.get(questionId);
-        cache.setUsersCurrentBotState(chatId, question);
-        System.out.println(question.getActions().size());
+        cache.setUsersCurrentBotState(message.getFrom().getId(), question);
+        SendMessage sendMessage = new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(message.getFrom().getId())));
+
         boolean hasButton = question.getActions().stream()
                 .anyMatch(a -> a.getType() == ActionType.BUTTON);
         if (hasButton){
-            return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(chatId)))
-                    .setReplyMarkup(getButtons(chatId, hasButton?question:null));
+            sendMessage = new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(message.getFrom().getId())))
+                    .setReplyMarkup(getButtons(message, hasButton?question:null));
         }
-        return new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(chatId)));
+        if (question.getQuestionKey().equals("last")) cache.removeSession(message.getFrom().getId());
+        return sendMessage;
     }
 
-    private ReplyKeyboardMarkup getButtons(String chatId, Question question){
+    private ReplyKeyboardMarkup getButtons(Message message, Question question){
         List<KeyboardRow> keyboardButtonsRow= new ArrayList<>();
         question.getActions().stream().forEach(a -> {
             KeyboardRow row = new KeyboardRow();
-            KeyboardButton button = new KeyboardButton().setText(a.getAnswer(cache.getSelectedLanguage(chatId)));
+            KeyboardButton button = new KeyboardButton()
+                    .setText(a.getAnswer(cache.getSelectedLanguage(message.getFrom().getId())));
             row.add(button);
             keyboardButtonsRow.add(row);
         });
@@ -75,17 +78,17 @@ public class BotServiceImpl implements BotService {
 
     private BotApiMethod<?> handleCommands(Message message){
         String chatId = message.getChatId().toString();
+        Integer clientId = message.getFrom().getId();
         if (message.getText().equals("/start")){
-            if (cache.getUserData(chatId) != null){
+            cache.setUserActiveSession(message);
+            if (cache.getUserData(clientId) != null){
                 return new SendMessage(chatId, "You have active session, please type /stop to restart");
             }
             cache.setQuestions(chatId);
-            return giveQuestion(chatId, 1);
+            return giveQuestion(message, 1);
         }
         else if (message.getText().equals("/stop")){
-            cache.removeUserData(chatId);
-            System.out.println(cache.getUserData(chatId));
-            System.out.println(cache.getUserData(chatId) == null);
+            cache.removeUserData(clientId);
             return new SendMessage(chatId, "Your session was removed, you can restart with typing /start");
         }
         return new SendMessage(chatId, "Incorrect command");
@@ -93,15 +96,14 @@ public class BotServiceImpl implements BotService {
 
     private BotApiMethod<?> handleTextMessage(Message message){
         String chatId = message.getChatId().toString();
-        Question question = cache.getUsersCurrentBotState(chatId);
-        if (question == null) return null;
-        if (question.getId() == 1){
-            cache.setSelectedLanguage(chatId, message.getText());
-        }
+        Integer clientId = message.getFrom().getId();
+        Question question = cache.getUsersCurrentBotState(clientId);
         if (!validate(question, message.getText())) return new SendMessage(chatId, "Incorrect answer");
-        cache.saveUserData(chatId, question.getId(), message.getText());
-        System.out.println(cache.getUserData(chatId));
+        if (question.getQuestionKey().equals("language")){
+            cache.setSelectedLanguage(clientId, message.getText());
+        }
+        cache.saveUserData(clientId, question.getQuestionKey(), message.getText());
         Action action = question.getActions().stream().findFirst().orElse(null);//TODO
-        return giveQuestion(chatId, action.getNextQuestion().getId());
+        return giveQuestion(message, action.getNextQuestion().getId());
     }
 }

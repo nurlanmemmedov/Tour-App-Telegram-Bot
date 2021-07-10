@@ -1,4 +1,4 @@
-package com.example.telegrambotapi.models;
+package com.example.telegrambotapi.models.entities;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
