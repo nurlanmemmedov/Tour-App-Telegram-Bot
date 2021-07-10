@@ -1,14 +1,15 @@
 package com.example.telegrambotapi.utils.cache;
 
-import com.example.telegrambotapi.dtos.TourRequestDto;
-import com.example.telegrambotapi.models.Action;
-import com.example.telegrambotapi.models.Question;
+import com.example.telegrambotapi.models.entities.Action;
+import com.example.telegrambotapi.models.entities.Question;
+import com.example.telegrambotapi.models.entities.Session;
 import com.example.telegrambotapi.repositories.QuestionRepository;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class DataCacheImpl implements DataCache{
@@ -20,50 +21,63 @@ public class DataCacheImpl implements DataCache{
     }
 
     private Map<String, Map<Integer, Question>>  questions = new HashMap<>();
-    private Map<String, Question> usersBotStates = new HashMap<>();
-    private Map<String, Map<Integer, String>> userData = new HashMap<>();
-    private Map<String, String> userLanguage = new HashMap<>();
+    private Map<String, Session> sessions = new HashMap<>();
+    private Map<Integer, Session> activeSessions = new HashMap<>();
 
     @Override
-    public void setUsersCurrentBotState(String id, Question question) {
-        usersBotStates.put(id, question);
+    public void setUserActiveSession(Message message){
+        Session session = Session.builder()
+                .uuid(UUID.randomUUID().toString())
+                .chatId(message.getChatId())
+                .clientId(message.getFrom().getId()).build();
+        activeSessions.put(session.getClientId(), session);
     }
 
     @Override
-    public Question getUsersCurrentBotState(String id) {
-        return usersBotStates.get(id);
+    public void removeSession(Integer clientId){
+        Session session = activeSessions.get(clientId);
+        sessions.put(session.getUuid(), session);
+        activeSessions.remove(clientId);
     }
 
     @Override
-    public void saveUserData(String id, Integer questionId, String answer){
-        if (userData.get(id) == null){
-            Map<Integer, String> answerMap = new HashMap<>();
-            answerMap.put(questionId, answer);
-            userData.put(id, answerMap);
+    public void setUsersCurrentBotState(Integer clientId, Question question) {
+        activeSessions.get(clientId).setCurrentQuestion(question);
+    }
+
+    @Override
+    public Question getUsersCurrentBotState(Integer clientId) {
+        if (activeSessions.get(clientId) == null) return null;
+        return activeSessions.get(clientId).getCurrentQuestion();
+    }
+
+    @Override
+    public void saveUserData(Integer clientId, String key, String answer){
+        Map<String, String> userData = activeSessions.get(clientId).getData();
+        if(userData == null){
+            userData = new HashMap<>();
         }
-        Map<Integer, String> answerMap  = userData.get(id);
-        answerMap.put(questionId, answer);
-
+        userData.put(key, answer);
     }
 
     @Override
-    public Map<Integer, String> getUserData(String id){
-        return userData.get(id);
+    public Map<String, String> getUserData(Integer clientId){
+        return activeSessions.get(clientId).getData();
     }
 
     @Override
-    public void removeUserData(String id){
-        userData.remove(id);
+    public void removeUserData(Integer clientId){
+        activeSessions.remove(clientId);
     }
 
     @Override
-    public void setSelectedLanguage(String id, String code){
-        userLanguage.put(id, code);
+    public void setSelectedLanguage(Integer clientId, String code){
+        activeSessions.get(clientId).setUserLanguage(code);
     }
 
     @Override
-    public String getSelectedLanguage(String id){
-        return userLanguage.get(id);
+    public String getSelectedLanguage(Integer clientId){
+        return activeSessions.get(clientId).getUserLanguage();
     }
 
     @Override

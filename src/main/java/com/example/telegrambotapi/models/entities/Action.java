@@ -1,4 +1,4 @@
-package com.example.telegrambotapi.models;
+package com.example.telegrambotapi.models.entities;
 
 import com.example.telegrambotapi.enums.ActionType;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
