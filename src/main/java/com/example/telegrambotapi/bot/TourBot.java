@@ -2,7 +2,7 @@ package com.example.telegrambotapi.bot;
 
 //import com.mycode.telegramstudentbot.bot.botFacade.TelegramFacade;
 
-import com.example.telegrambotapi.services.BotService;
+import com.example.telegrambotapi.services.interfaces.BotService;
 
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;

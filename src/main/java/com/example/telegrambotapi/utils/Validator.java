@@ -6,7 +6,8 @@ import com.example.telegrambotapi.models.entities.Question;
 public class Validator {
     public static boolean validate(Question question, String text){
         if (question == null) return false;
-        boolean hasButton = question.getActions().stream()
+        if (question.getRegex() == null) return true;
+            boolean hasButton = question.getActions().stream()
                 .anyMatch(a -> a.getType() == ActionType.BUTTON);
         if (hasButton){
             return  question.getActions()

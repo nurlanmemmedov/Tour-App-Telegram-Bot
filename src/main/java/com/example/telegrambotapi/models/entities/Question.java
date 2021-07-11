@@ -1,5 +1,6 @@
 package com.example.telegrambotapi.models.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -28,11 +29,13 @@ public class Question implements Serializable {
     @Column(name = "regex")
     private String regex;
 
+    @JsonBackReference
     @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "question",
             cascade = CascadeType.ALL)
     private List<Action> actions;
 
+    @JsonBackReference
     @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "question",
             cascade = CascadeType.ALL)
