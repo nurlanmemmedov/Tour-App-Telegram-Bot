@@ -8,7 +8,7 @@ import java.util.Map;
 public interface DataCache {
     void setUserActiveSession(Message message);
 
-    void removeSession(Integer clientId);
+    void endPoll(Integer clientId);
 
     void setUsersCurrentBotState(Integer clientId, Question question);
 
@@ -16,9 +16,9 @@ public interface DataCache {
 
     void saveUserData(Integer clientId, String key, String answer);
 
-    Map<String, String> getUserData(Integer clientIdd);
+    Boolean hasActiveSession(Integer clientIdd);
 
-    void removeUserData(Integer clientId);
+    void stopActivePoll(Integer clientId);
 
     void setSelectedLanguage(Integer clientId, String code);
 

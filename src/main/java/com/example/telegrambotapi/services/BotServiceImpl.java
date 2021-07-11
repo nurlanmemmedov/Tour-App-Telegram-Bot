@@ -1,9 +1,9 @@
-package com.example.telegrambotapi.services.implementations;
+package com.example.telegrambotapi.services;
 import com.example.telegrambotapi.enums.ActionType;
 import com.example.telegrambotapi.models.entities.Action;
 import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.repositories.QuestionRepository;
-import com.example.telegrambotapi.services.BotService;
+import com.example.telegrambotapi.services.interfaces.BotService;
 import com.example.telegrambotapi.utils.cache.DataCache;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
@@ -26,6 +26,7 @@ public class BotServiceImpl implements BotService {
 
     private QuestionRepository repository;
     private DataCache cache;
+
 
     public BotServiceImpl(DataCache cache, QuestionRepository repository){
         this.cache = cache;
@@ -57,7 +58,7 @@ public class BotServiceImpl implements BotService {
             sendMessage = new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(message.getFrom().getId())))
                     .setReplyMarkup(getButtons(message, hasButton?question:null));
         }
-        if (question.getQuestionKey().equals("last")) cache.removeSession(message.getFrom().getId());
+        if (question.getQuestionKey().equals("last")) cache.endPoll(message.getFrom().getId());
         return sendMessage;
     }
 
@@ -80,23 +81,27 @@ public class BotServiceImpl implements BotService {
         String chatId = message.getChatId().toString();
         Integer clientId = message.getFrom().getId();
         if (message.getText().equals("/start")){
-            cache.setUserActiveSession(message);
-            if (cache.getUserData(clientId) != null){
+            if (cache.hasActiveSession(clientId)){
                 return new SendMessage(chatId, "You have active session, please type /stop to restart");
             }
+            cache.setUserActiveSession(message);
             cache.setQuestions(chatId);
             return giveQuestion(message, 1);
         }
         else if (message.getText().equals("/stop")){
-            cache.removeUserData(clientId);
+            cache.stopActivePoll(clientId);
             return new SendMessage(chatId, "Your session was removed, you can restart with typing /start");
         }
         return new SendMessage(chatId, "Incorrect command");
     }
 
     private BotApiMethod<?> handleTextMessage(Message message){
-        String chatId = message.getChatId().toString();
         Integer clientId = message.getFrom().getId();
+        String chatId = message.getChatId().toString();
+
+        if (!cache.hasActiveSession(clientId) || cache.getQuestion(chatId) == null){
+            return new SendMessage(chatId, "Please type /start to start");
+        }
         Question question = cache.getUsersCurrentBotState(clientId);
         if (!validate(question, message.getText())) return new SendMessage(chatId, "Incorrect answer");
         if (question.getQuestionKey().equals("language")){
@@ -104,6 +109,7 @@ public class BotServiceImpl implements BotService {
         }
         cache.saveUserData(clientId, question.getQuestionKey(), message.getText());
         Action action = question.getActions().stream().findFirst().orElse(null);//TODO
+        if (action == null) return null;
         return giveQuestion(message, action.getNextQuestion().getId());
     }
 }

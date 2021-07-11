@@ -1,5 +1,6 @@
 package com.example.telegrambotapi.configs;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +14,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 @EnableRedisRepositories
+@Qualifier("redis")
 public class RedisConfig {
 
     @Bean
@@ -23,7 +25,7 @@ public class RedisConfig {
         return new JedisConnectionFactory(configuration);
     }
 
-    @Bean
+    @Bean("redis")
     public RedisTemplate<String, Object> template() {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory());

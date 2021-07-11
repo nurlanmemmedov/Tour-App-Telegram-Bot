@@ -1,13 +1,22 @@
 package com.example.telegrambotapi.utils.cache;
 
+import com.example.telegrambotapi.configs.RabbitmqConfig;
+import com.example.telegrambotapi.enums.RequestStatus;
 import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.models.Session;
+import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.QuestionRepository;
+import com.example.telegrambotapi.repositories.RequestRepository;
 import com.example.telegrambotapi.repositories.SessionRepository;
+import com.example.telegrambotapi.services.interfaces.RabbitmqService;
+import com.example.telegrambotapi.services.interfaces.RequestService;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -15,12 +24,21 @@ import java.util.UUID;
 public class DataCacheImpl implements DataCache{
 
     private QuestionRepository repository;
+    private RequestService requestService;
     private SessionRepository redisRepository;
+    private RabbitmqService rabbitmqService;
+    @Autowired
+    private RabbitTemplate template;
     private Map<String, Map<Integer, Question>>  questions = new HashMap<>();
 
-    public DataCacheImpl(QuestionRepository repository, SessionRepository redisRepository){
+    public DataCacheImpl(QuestionRepository repository,
+                         SessionRepository redisRepository,
+                         RabbitmqService rabbitmqService,
+                         RequestService requestService){
         this.repository = repository;
         this.redisRepository = redisRepository;
+        this.rabbitmqService = rabbitmqService;
+        this.requestService = requestService;
     }
 
     @Override
@@ -29,61 +47,70 @@ public class DataCacheImpl implements DataCache{
                 .uuid(UUID.randomUUID().toString())
                 .chatId(message.getChatId())
                 .clientId(message.getFrom().getId()).build();
-        redisRepository.saveActiveSession(session);
+        redisRepository.save(session);
     }
 
     @Override
-    public void removeSession(Integer clientId){
-        Session session = redisRepository.findActiveSessionUuid(clientId);
-        redisRepository.saveSession(session);
-        redisRepository.deleteActiveSession(clientId);
+    public void endPoll(Integer clientId){
+        Session session = redisRepository.find(clientId);
+        requestService.save(session);
+        rabbitmqService.sendToPollQueue(session);
+        redisRepository.delete(clientId);
     }
 
     @Override
     public void setUsersCurrentBotState(Integer clientId, Question question) {
-        Session session = redisRepository.findActiveSessionUuid(clientId);
+        Session session = redisRepository.find(clientId);
         session.setCurrentQuestion(question);
-        redisRepository.saveActiveSession(session);
+        redisRepository.save(session);
     }
 
     @Override
     public Question getUsersCurrentBotState(Integer clientId) {
-        if (redisRepository.findActiveSessionUuid(clientId) == null) return null;
-        return redisRepository.findActiveSessionUuid(clientId).getCurrentQuestion();
+        if (redisRepository.find(clientId) == null) return null;
+        return redisRepository.find(clientId).getCurrentQuestion();
     }
 
     @Override
     public void saveUserData(Integer clientId, String key, String answer){
-        Session session = redisRepository.findActiveSessionUuid(clientId);
+        Session session = redisRepository.find(clientId);
         Map<String, String> userData = session.getData();
         if(userData == null){
             userData = new HashMap<>();
         }
         userData.put(key, answer);
         session.setData(userData);
-        redisRepository.saveActiveSession(session);
+        redisRepository.save(session);
     }
 
     @Override
-    public Map<String, String> getUserData(Integer clientId){
-        return redisRepository.findActiveSessionUuid(clientId).getData();
+    public Boolean hasActiveSession(Integer clientId){
+         return (redisRepository.find(clientId) != null
+                 || requestService.findByClientId(clientId).stream()
+                 .anyMatch(r -> r.getStatus() == RequestStatus.ACTIVE));
     }
 
     @Override
-    public void removeUserData(Integer clientId){
-        redisRepository.deleteActiveSession(clientId);
+    public void stopActivePoll(Integer clientId){
+        redisRepository.delete(clientId);
+        List<Request> requests = requestService.findByClientId(clientId);
+        requests.stream().filter(r -> r.getStatus() != RequestStatus.STOPPED)
+                .forEach(r -> {
+                    requestService.changeStatusByClientId(r.getId(), RequestStatus.STOPPED);
+                    rabbitmqService.sendToStopQueue(r.getUuid());
+                });
     }
 
     @Override
     public void setSelectedLanguage(Integer clientId, String code){
-        Session session = redisRepository.findActiveSessionUuid(clientId);
+        Session session = redisRepository.find(clientId);
         session.setUserLanguage(code);
-        redisRepository.saveActiveSession(session);
+        redisRepository.save(session);
     }
 
     @Override
     public String getSelectedLanguage(Integer clientId){
-        return redisRepository.findActiveSessionUuid(clientId).getUserLanguage();
+        return redisRepository.find(clientId).getUserLanguage();
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.telegrambotapi.models.entities;
 
 import com.example.telegrambotapi.enums.ActionType;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,6 +22,8 @@ public class Action implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+
+    @JsonManagedReference
     @ManyToOne
     @JoinColumn(name="question_id", nullable=false)
     private Question question;
@@ -32,6 +35,7 @@ public class Action implements Serializable {
     @JoinColumn(name = "next_id", referencedColumnName = "id")
     private Question nextQuestion;
 
+    @JsonBackReference
     @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "action",
             cascade = CascadeType.ALL)
