@@ -1,13 +1,12 @@
-package com.example.telegrambotapi.utils.cache;
+package com.example.telegrambotapi.services;
 
-import com.example.telegrambotapi.configs.RabbitmqConfig;
 import com.example.telegrambotapi.enums.RequestStatus;
 import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.models.Session;
 import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.QuestionRepository;
-import com.example.telegrambotapi.repositories.RequestRepository;
 import com.example.telegrambotapi.repositories.SessionRepository;
+import com.example.telegrambotapi.services.interfaces.CacheService;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -20,29 +19,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * this class implements CacheService
+ * is used to make operations with sessions in cache
+ */
 @Service
-public class DataCacheImpl implements DataCache{
+public class CacheServiceServiceImpl implements CacheService {
 
     private QuestionRepository repository;
     private RequestService requestService;
     private SessionRepository redisRepository;
     private RabbitmqService rabbitmqService;
-    @Autowired
-    private RabbitTemplate template;
+
     private Map<String, Map<Integer, Question>>  questions = new HashMap<>();
 
-    public DataCacheImpl(QuestionRepository repository,
-                         SessionRepository redisRepository,
-                         RabbitmqService rabbitmqService,
-                         RequestService requestService){
+    public CacheServiceServiceImpl(QuestionRepository repository,
+                                   SessionRepository redisRepository,
+                                   RabbitmqService rabbitmqService,
+                                   RequestService requestService){
         this.repository = repository;
         this.redisRepository = redisRepository;
         this.rabbitmqService = rabbitmqService;
         this.requestService = requestService;
     }
 
+    /**
+     * {@inheritDoc}
+     * @param message
+     */
     @Override
-    public void setUserActiveSession(Message message){
+    public void createSession(Message message){
         Session session = Session.builder()
                 .uuid(UUID.randomUUID().toString())
                 .chatId(message.getChatId())
@@ -50,6 +56,10 @@ public class DataCacheImpl implements DataCache{
         redisRepository.save(session);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     */
     @Override
     public void endPoll(Integer clientId){
         Session session = redisRepository.find(clientId);
@@ -58,19 +68,35 @@ public class DataCacheImpl implements DataCache{
         redisRepository.delete(clientId);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @param question
+     */
     @Override
-    public void setUsersCurrentBotState(Integer clientId, Question question) {
+    public void setCurrentQuestion(Integer clientId, Question question) {
         Session session = redisRepository.find(clientId);
         session.setCurrentQuestion(question);
         redisRepository.save(session);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @return
+     */
     @Override
-    public Question getUsersCurrentBotState(Integer clientId) {
+    public Question getCurrentQuestion(Integer clientId) {
         if (redisRepository.find(clientId) == null) return null;
         return redisRepository.find(clientId).getCurrentQuestion();
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @param key
+     * @param answer
+     */
     @Override
     public void saveUserData(Integer clientId, String key, String answer){
         Session session = redisRepository.find(clientId);
@@ -83,6 +109,11 @@ public class DataCacheImpl implements DataCache{
         redisRepository.save(session);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @return
+     */
     @Override
     public Boolean hasActiveSession(Integer clientId){
          return (redisRepository.find(clientId) != null
@@ -90,6 +121,10 @@ public class DataCacheImpl implements DataCache{
                  .anyMatch(r -> r.getStatus() == RequestStatus.ACTIVE));
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     */
     @Override
     public void stopActivePoll(Integer clientId){
         redisRepository.delete(clientId);
@@ -101,6 +136,11 @@ public class DataCacheImpl implements DataCache{
                 });
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @param code
+     */
     @Override
     public void setSelectedLanguage(Integer clientId, String code){
         Session session = redisRepository.find(clientId);
@@ -108,11 +148,20 @@ public class DataCacheImpl implements DataCache{
         redisRepository.save(session);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @return
+     */
     @Override
     public String getSelectedLanguage(Integer clientId){
         return redisRepository.find(clientId).getUserLanguage();
     }
 
+    /**
+     * {@inheritDoc}
+     * @param id
+     */
     @Override
     public void setQuestions(String id) {
         Map<Integer, Question> questionMap = new HashMap<>();
@@ -120,6 +169,11 @@ public class DataCacheImpl implements DataCache{
         questions.put(id, questionMap);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param id
+     * @return
+     */
     @Override
     public Map<Integer, Question> getQuestion(String id) {
         return questions.get(id);

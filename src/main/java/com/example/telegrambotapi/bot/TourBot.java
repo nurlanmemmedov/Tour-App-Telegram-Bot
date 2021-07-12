@@ -1,8 +1,6 @@
 package com.example.telegrambotapi.bot;
 
-//import com.mycode.telegramstudentbot.bot.botFacade.TelegramFacade;
-
-import com.example.telegrambotapi.services.interfaces.BotService;
+import com.example.telegrambotapi.services.interfaces.TourService;
 
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
@@ -14,9 +12,9 @@ public class TourBot extends TelegramWebhookBot {
 
     String botToken;
     String botUsername;
-    BotService service;
+    TourService service;
 
-    public TourBot(BotService service){
+    public TourBot(TourService service){
         this.service = service;
     }
 

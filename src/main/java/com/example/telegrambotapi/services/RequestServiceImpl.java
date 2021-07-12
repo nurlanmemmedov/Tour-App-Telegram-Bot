@@ -9,6 +9,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * this class implements the RequestService
+ * is used to make operations on request entities
+ */
 @Service
 public class RequestServiceImpl implements RequestService {
 
@@ -18,6 +22,10 @@ public class RequestServiceImpl implements RequestService {
         this.repository = repository;
     }
 
+    /**
+     * {@inheritDoc}
+     * @param session
+     */
     @Override
     public void save(Session session) {
         Request request = Request.builder().clientId(session.getClientId())
@@ -27,11 +35,21 @@ public class RequestServiceImpl implements RequestService {
         repository.save(request);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @return
+     */
     @Override
     public List<Request> findByClientId(Integer clientId) {
         return repository.findByClientId(clientId);
     }
 
+    /**
+     * {@inheritDoc}
+     * @param id
+     * @param status
+     */
     @Override
     public void changeStatusByClientId(Integer id, RequestStatus status){
         Request request = repository.getById(id);
