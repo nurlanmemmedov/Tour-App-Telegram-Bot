@@ -3,8 +3,8 @@ import com.example.telegrambotapi.enums.ActionType;
 import com.example.telegrambotapi.models.entities.Action;
 import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.repositories.QuestionRepository;
-import com.example.telegrambotapi.services.interfaces.BotService;
-import com.example.telegrambotapi.utils.cache.DataCache;
+import com.example.telegrambotapi.services.interfaces.TourService;
+import com.example.telegrambotapi.services.interfaces.CacheService;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
@@ -22,13 +22,14 @@ import java.util.Map;
 import static com.example.telegrambotapi.utils.Validator.*;
 
 @Component
-public class BotServiceImpl implements BotService {
+public class TourServiceImpl implements TourService {
 
     private QuestionRepository repository;
-    private DataCache cache;
+    private CacheService cache;
 
 
-    public BotServiceImpl(DataCache cache, QuestionRepository repository){
+    public TourServiceImpl(CacheService cache,
+                           QuestionRepository repository){
         this.cache = cache;
         this.repository = repository;
     }
@@ -37,7 +38,6 @@ public class BotServiceImpl implements BotService {
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
         Message message = update.getMessage();
-        if (message == null) return null;
         if (message.getText().startsWith("/")){
             return handleCommands(message);
         }
@@ -49,7 +49,7 @@ public class BotServiceImpl implements BotService {
         String chatId = message.getChatId().toString();
         Map<Integer, Question> questionMap = cache.getQuestion(chatId);
         Question question = questionMap.get(questionId);
-        cache.setUsersCurrentBotState(message.getFrom().getId(), question);
+        cache.setCurrentQuestion(message.getFrom().getId(), question);
         SendMessage sendMessage = new SendMessage(chatId, question.getQuestionText(cache.getSelectedLanguage(message.getFrom().getId())));
 
         boolean hasButton = question.getActions().stream()
@@ -84,7 +84,7 @@ public class BotServiceImpl implements BotService {
             if (cache.hasActiveSession(clientId)){
                 return new SendMessage(chatId, "You have active session, please type /stop to restart");
             }
-            cache.setUserActiveSession(message);
+            cache.createSession(message);
             cache.setQuestions(chatId);
             return giveQuestion(message, 1);
         }
@@ -102,7 +102,7 @@ public class BotServiceImpl implements BotService {
         if (!cache.hasActiveSession(clientId) || cache.getQuestion(chatId) == null){
             return new SendMessage(chatId, "Please type /start to start");
         }
-        Question question = cache.getUsersCurrentBotState(clientId);
+        Question question = cache.getCurrentQuestion(clientId);
         if (!validate(question, message.getText())) return new SendMessage(chatId, "Incorrect answer");
         if (question.getQuestionKey().equals("language")){
             cache.setSelectedLanguage(clientId, message.getText());
