@@ -9,7 +9,7 @@ import java.util.Map;
  * represents the cache service throughout the application
  * is used to make operations with sessions in cache
  */
-public interface CacheService {
+public interface DataService {
 
     /**
      * creates new session object
@@ -73,16 +73,16 @@ public interface CacheService {
      */
     String getSelectedLanguage(Integer clientId);
 
-    /**
-     * set questions to the question map from database
-     * @param id
-     */
-    void setQuestions(String id);
-
-    /**
-     * gets question from questions map
-     * @param id
-     * @return
-     */
-    Map<Integer, Question>  getQuestion(String id);
+//    /**
+//     * set questions to the question map from database
+//     * @param id
+//     */
+//    void setQuestions(String id);
+//
+//    /**
+//     * gets question from questions map
+//     * @param id
+//     * @return
+//     */
+//    Map<Integer, Question>  getQuestion(String id);
 }

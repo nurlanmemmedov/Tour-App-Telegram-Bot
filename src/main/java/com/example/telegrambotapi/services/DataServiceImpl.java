@@ -6,11 +6,9 @@ import com.example.telegrambotapi.models.Session;
 import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.QuestionRepository;
 import com.example.telegrambotapi.repositories.SessionRepository;
-import com.example.telegrambotapi.services.interfaces.CacheService;
+import com.example.telegrambotapi.services.interfaces.DataService;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
@@ -24,19 +22,17 @@ import java.util.UUID;
  * is used to make operations with sessions in cache
  */
 @Service
-public class CacheServiceServiceImpl implements CacheService {
+public class DataServiceImpl implements DataService {
 
     private QuestionRepository repository;
     private RequestService requestService;
     private SessionRepository redisRepository;
     private RabbitmqService rabbitmqService;
 
-    private Map<String, Map<Integer, Question>>  questions = new HashMap<>();
-
-    public CacheServiceServiceImpl(QuestionRepository repository,
-                                   SessionRepository redisRepository,
-                                   RabbitmqService rabbitmqService,
-                                   RequestService requestService){
+    public DataServiceImpl(QuestionRepository repository,
+                           SessionRepository redisRepository,
+                           RabbitmqService rabbitmqService,
+                           RequestService requestService){
         this.repository = repository;
         this.redisRepository = redisRepository;
         this.rabbitmqService = rabbitmqService;
@@ -158,24 +154,24 @@ public class CacheServiceServiceImpl implements CacheService {
         return redisRepository.find(clientId).getUserLanguage();
     }
 
-    /**
-     * {@inheritDoc}
-     * @param id
-     */
-    @Override
-    public void setQuestions(String id) {
-        Map<Integer, Question> questionMap = new HashMap<>();
-        repository.findAll().stream().forEach(q -> questionMap.put(q.getId(), q));
-        questions.put(id, questionMap);
-    }
-
-    /**
-     * {@inheritDoc}
-     * @param id
-     * @return
-     */
-    @Override
-    public Map<Integer, Question> getQuestion(String id) {
-        return questions.get(id);
-    }
+//    /**
+//     * {@inheritDoc}
+//     * @param id
+//     */
+//    @Override
+//    public void setQuestions(String id) {
+//        Map<Integer, Question> questionMap = new HashMap<>();
+//        repository.findAll().stream().forEach(q -> questionMap.put(q.getId(), q));
+//        questions.put(id, questionMap);
+//    }
+//
+//    /**
+//     * {@inheritDoc}
+//     * @param id
+//     * @return
+//     */
+//    @Override
+//    public Map<Integer, Question> getQuestion(String id) {
+//        return questions.get(id);
+//    }
 }

@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface RequestRepository extends JpaRepository<Request, Integer> {
     List<Request> findByClientId(Integer clientId);
+    Request getRequestByUuid(String uuid);
 }
