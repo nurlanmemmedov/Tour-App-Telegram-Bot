@@ -1,8 +1,13 @@
 package com.example.telegrambotapi.services;
 import com.example.telegrambotapi.bot.TourBot;
 import com.example.telegrambotapi.enums.ActionType;
+import com.example.telegrambotapi.enums.RequestStatus;
 import com.example.telegrambotapi.models.QuestionBag;
+import com.example.telegrambotapi.models.entities.Offer;
 import com.example.telegrambotapi.models.entities.Question;
+import com.example.telegrambotapi.models.entities.Request;
+import com.example.telegrambotapi.repositories.OfferRepository;
+import com.example.telegrambotapi.repositories.RequestRepository;
 import com.example.telegrambotapi.services.interfaces.TourService;
 import com.example.telegrambotapi.services.interfaces.DataService;
 import lombok.SneakyThrows;
@@ -15,9 +20,12 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -31,19 +39,29 @@ public class TourServiceImpl implements TourService {
 
     private DataService service;
     private QuestionBag questionBag;
+    private RequestRepository requestRepository;
+    private OfferRepository offerRepository;
+    private TourBot bot;
 
 
     public TourServiceImpl(DataService service,
-                           QuestionBag questionBag){
+                           QuestionBag questionBag,
+                           RequestRepository requestRepository,
+                           OfferRepository offerRepository,
+                           @Lazy TourBot bot){
         this.service = service;
         this.questionBag = questionBag;
+        this.requestRepository = requestRepository;
+        this.offerRepository = offerRepository;
+        this.bot = bot;
     }
 
     @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
-        if(update.getMessage().getText().equals("/image")){
-            System.out.println(update.getMessage().getChatId());
+        if (update.hasCallbackQuery())
+        {
+            return handleCallBackQuery(update);
         }
         Message message = update.getMessage();
         if (message.getText().startsWith("/")){
@@ -111,4 +129,46 @@ public class TourServiceImpl implements TourService {
         service.saveUserData(clientId, question.getQuestionKey(), message.getText());
         return giveQuestion(message, questionBag.getNext(question, message));
     }
+
+    private BotApiMethod<?> handleCallBackQuery(Update update){
+        Integer clientId = update.getCallbackQuery().getFrom().getId();
+        if(update.getCallbackQuery().getData().equals("load")){
+            loadNextOffers(clientId);
+        }
+        return null;
+    }
+
+    @SneakyThrows
+    private void loadNextOffers(Integer clientId) {
+        List<Request> requests = requestRepository.findByClientId(clientId);
+        Request activeRequest = requests.stream()
+                .filter(r -> r.getStatus() == RequestStatus.ACTIVE).findFirst().orElse(null);
+        if (activeRequest == null) return; //TODO
+        activeRequest.setHasNext(true);
+        activeRequest.getNextNotSentRequests().stream().forEach(o -> {
+            sendOffer(o);
+        });
+        if (activeRequest.getNextNotSentRequests().size() % 5 == 0){
+            activeRequest.setHasNext(false);
+            List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
+            InlineKeyboardButton button = new InlineKeyboardButton()
+                    .setText("Load..");
+            button.setCallbackData("load");
+            keyboardButtonsRow.add(button);
+            InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
+            rowList.add(keyboardButtonsRow);
+            inlineKeyboardMarkup.setKeyboard(rowList);
+            bot.execute(new SendMessage(activeRequest.getChatId(), "Do you want to load new Messages?")
+                    .setReplyMarkup(inlineKeyboardMarkup));
+        }
+        requestRepository.save(activeRequest);
+    }
+
+    private void sendOffer(Offer offer){
+        bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
+        offer.setIsSent(true);
+        offerRepository.save(offer);
+    }
+
 }

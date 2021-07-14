@@ -33,10 +33,6 @@ public class TourBot extends TelegramWebhookBot {
     @SneakyThrows
     @Override
     public BotApiMethod onWebhookUpdateReceived(Update update) {
-        if (update.getMessage().getText().equals("/image")){
-            sendPhoto(update.getMessage().getChatId(), "AAAAAAAAAAAAAAaa", "https://firebasestorage.googleapis.com/v0/b/turboaz-e8cff.appspot.com/o/WIN_20210708_08_46_05_Pro.jpg?alt=media&token=b4fa1dd9-2769-4478-b149-241d76619b46");
-            return null;
-        }
         final BotApiMethod<?> replyMessageToUser = service.handleUpdate(update);
         return replyMessageToUser;
     }
@@ -64,22 +60,12 @@ public class TourBot extends TelegramWebhookBot {
     }
 
     @SneakyThrows
-    public void sendPhoto(Long chatId, String imageCaption, String imagePath) {
+    public void sendPhoto(Long chatId,  String imagePath) {
         URL url = new URL(imagePath);
         File file = new File("filename.jpg");
         FileUtils.copyURLToFile(url, file);
         SendPhoto sendPhoto = new SendPhoto().setPhoto(file);
         sendPhoto.setChatId(chatId);
-        sendPhoto.setCaption(imageCaption);
         execute(sendPhoto);
     }
-
-//    InputStream inputStream = new ByteArrayInputStream(array);
-//    InputFile inputFile = new InputFile();
-//        inputFile.setMedia(inputStream, "image");
-
-//    bot.execute(SendPhoto.builder()
-//            .chatId(botSession.getChatId())
-//            .photo(inputFile).build());
-
 }
