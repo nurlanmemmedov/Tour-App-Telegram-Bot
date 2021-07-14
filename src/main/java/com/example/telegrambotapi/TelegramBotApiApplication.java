@@ -2,6 +2,7 @@ package com.example.telegrambotapi;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.telegram.telegrambots.ApiContextInitializer;
 
 @SpringBootApplication
 public class TelegramBotApiApplication {
@@ -9,5 +10,4 @@ public class TelegramBotApiApplication {
     public static void main(String[] args) {
         SpringApplication.run(TelegramBotApiApplication.class, args);
     }
-
 }
