@@ -1,4 +1,4 @@
-package com.example.telegrambotapi.repositories;
+package com.example.telegrambotapi.repositories.redis;
 
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.models.Session;

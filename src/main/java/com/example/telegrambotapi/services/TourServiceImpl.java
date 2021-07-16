@@ -8,6 +8,7 @@ import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.OfferRepository;
 import com.example.telegrambotapi.repositories.RequestRepository;
+import com.example.telegrambotapi.repositories.redis.SentOfferRepository;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.TourService;
 import com.example.telegrambotapi.services.interfaces.DataService;
@@ -38,6 +39,7 @@ public class TourServiceImpl implements TourService {
     private QuestionBag questionBag;
     private RequestRepository requestRepository;
     private OfferRepository offerRepository;
+    private SentOfferRepository sentOfferRepository;
     private RabbitmqService rabbitmqService;
     private TourBot bot;
 
@@ -47,12 +49,14 @@ public class TourServiceImpl implements TourService {
                            RequestRepository requestRepository,
                            OfferRepository offerRepository,
                            RabbitmqService rabbitmqService,
+                           SentOfferRepository sentOfferRepository,
                            @Lazy TourBot bot){
         this.service = service;
         this.questionBag = questionBag;
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
         this.rabbitmqService = rabbitmqService;
+        this.sentOfferRepository = sentOfferRepository;
         this.bot = bot;
     }
 
@@ -168,12 +172,17 @@ public class TourServiceImpl implements TourService {
         Request activeRequest = requests.stream()
                 .filter(r -> r.getStatus() == RequestStatus.ACTIVE).findFirst().orElse(null);
         if (activeRequest == null) return; //TODO
-        activeRequest.setHasNext(true);
+        sentOfferRepository.delete(activeRequest.getId());
         activeRequest.getNextNotSentRequests().stream().forEach(o -> {
             sendOffer(o);
         });
-        if (activeRequest.getNextNotSentRequests().size() % 5 == 0){
-            activeRequest.setHasNext(false);
+
+        requestRepository.save(activeRequest);
+    }
+
+    @SneakyThrows
+    private void sendOffer(Offer offer){
+        if (sentOfferRepository.find(offer.getRequest().getId()) == 5){
             List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton()
                     .setText("Load..");
@@ -183,17 +192,15 @@ public class TourServiceImpl implements TourService {
             List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
             rowList.add(keyboardButtonsRow);
             inlineKeyboardMarkup.setKeyboard(rowList);
-            bot.execute(new SendMessage(activeRequest.getChatId(), "Do you want to load new Messages?")
+            bot.execute(new SendMessage(offer.getRequest().getChatId(), "Do you want to load new Messages?")
                     .setReplyMarkup(inlineKeyboardMarkup));
+            return;
         }
-        requestRepository.save(activeRequest);
-    }
-
-    private void sendOffer(Offer offer){
         Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
         offer.setMessageId(message.getMessageId());
         offer.setIsSent(true);
         offerRepository.save(offer);
+        sentOfferRepository.save(offer.getRequest().getId());
     }
 
 }

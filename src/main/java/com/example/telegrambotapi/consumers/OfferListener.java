@@ -6,6 +6,7 @@ import com.example.telegrambotapi.models.entities.Offer;
 import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.OfferRepository;
 import com.example.telegrambotapi.repositories.RequestRepository;
+import com.example.telegrambotapi.repositories.redis.SentOfferRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -22,12 +23,15 @@ import java.util.stream.Collectors;
 public class OfferListener {
 
     private OfferRepository repository;
+    private SentOfferRepository sentOfferRepository;
     private RequestRepository requestRepository;
     private TourBot bot;
 
     public OfferListener(OfferRepository repository, TourBot bot,
-                         RequestRepository requestRepository){
+                         RequestRepository requestRepository,
+                         SentOfferRepository sentOfferRepository){
         this.repository = repository;
+        this.sentOfferRepository = sentOfferRepository;
         this.requestRepository = requestRepository;
         this.bot = bot;
     }
@@ -39,15 +43,15 @@ public class OfferListener {
         Offer newOffer = Offer.builder().uuid(offer.getUuid())
                 .path(offer.getPath()).agentId(offer.getAgentId())
                 .isSent(false).request(request).build();
-        if (request.getHasNext()  && request.getOffers().size() > 0 &&
-                request.getOffers().size() % 5 == 0){
-            request.setHasNext(false);
-
+        System.out.println("AAAAAAAAAAAAAAAAAAAAAAA");
+        System.out.println(sentOfferRepository.find(request.getId()));
+        System.out.println("AAAAAAAAAAAAAAAAAAAAAAA");
+        if (sentOfferRepository.find(request.getId()) == 5){
             List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
-                InlineKeyboardButton button = new InlineKeyboardButton()
-                        .setText("Load..");
-                button.setCallbackData("load");
-                keyboardButtonsRow.add(button);
+            InlineKeyboardButton button = new InlineKeyboardButton()
+                    .setText("Load..");
+            button.setCallbackData("load");
+            keyboardButtonsRow.add(button);
             InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
             rowList.add(keyboardButtonsRow);
@@ -55,10 +59,11 @@ public class OfferListener {
             bot.execute(new SendMessage(request.getChatId(), "Do you want to load new Messages?")
                     .setReplyMarkup(inlineKeyboardMarkup));
         }
-        if (request.getHasNext()){
+        else if(sentOfferRepository.find(request.getId()) < 5){
             Message message = bot.sendPhoto(request.getChatId(), offer.getPath());
             newOffer.setMessageId(message.getMessageId());
             newOffer.setIsSent(true);
+            sentOfferRepository.save(request.getId());
         }
         requestRepository.save(request);
         repository.save(newOffer);
