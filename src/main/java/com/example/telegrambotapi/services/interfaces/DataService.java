@@ -1,5 +1,6 @@
 package com.example.telegrambotapi.services.interfaces;
 
+import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.models.entities.Question;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
@@ -23,6 +24,11 @@ public interface DataService {
      */
     void endPoll(Integer clientId);
 
+    /**
+     * completes poll
+     * @param clientId
+     */
+    void completePoll(Integer clientId);
 
     /**
      * sets current question to user's session
@@ -73,16 +79,16 @@ public interface DataService {
      */
     String getSelectedLanguage(Integer clientId);
 
-//    /**
-//     * set questions to the question map from database
-//     * @param id
-//     */
-//    void setQuestions(String id);
-//
-//    /**
-//     * gets question from questions map
-//     * @param id
-//     * @return
-//     */
-//    Map<Integer, Question>  getQuestion(String id);
+    /**
+     * sets selected offer data to redis
+     * @param offer
+     */
+    void setSelectedOffer(SelectedOfferDto offer);
+
+    /**
+     * gets user's selected offer data from redis
+     * @param clientId
+     * @return
+     */
+    SelectedOfferDto getSelectedOffer(Integer clientId);
 }

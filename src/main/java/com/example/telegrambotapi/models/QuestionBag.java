@@ -21,11 +21,13 @@ public class QuestionBag {
 
     private List<Question> questions;
     private Question firstQuestion;
+    private Question phoneQuestion;
 
     @PostConstruct
     public void init(){
         this.questions = repository.findAll();
         this.firstQuestion = repository.getQuestionByQuestionKey("language");
+        this.phoneQuestion = repository.getQuestionByQuestionKey("askPhone");
     }
 
     public Question getNext(Question question, Message message){
@@ -49,6 +51,10 @@ public class QuestionBag {
 
     public Boolean isLast(Question question){
         return question.getQuestionKey().equals("last");
+    }
+
+    public Boolean isEnding(Question question){
+        return question.getQuestionKey().equals("end");
     }
 
     public Boolean hasButton(Question question){

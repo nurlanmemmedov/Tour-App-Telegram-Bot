@@ -20,6 +20,8 @@ public class Offer {
     private int id;
     private String uuid;
     private String path;
+    private Integer messageId;
+    private Integer agentId;
 
     @JsonBackReference
     @ManyToOne(targetEntity = Request.class, fetch = FetchType.EAGER)
