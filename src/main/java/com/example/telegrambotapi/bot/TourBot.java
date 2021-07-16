@@ -7,7 +7,9 @@ import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.telegram.telegrambots.bots.TelegramWebhookBot;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.io.File;
@@ -60,12 +62,12 @@ public class TourBot extends TelegramWebhookBot {
     }
 
     @SneakyThrows
-    public void sendPhoto(Long chatId,  String imagePath) {
+    public Message sendPhoto(Long chatId, String imagePath) {
         URL url = new URL(imagePath);
         File file = new File("filename.jpg");
         FileUtils.copyURLToFile(url, file);
         SendPhoto sendPhoto = new SendPhoto().setPhoto(file);
         sendPhoto.setChatId(chatId);
-        execute(sendPhoto);
+        return execute(sendPhoto);
     }
 }

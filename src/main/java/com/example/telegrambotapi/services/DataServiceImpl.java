@@ -1,10 +1,12 @@
 package com.example.telegrambotapi.services;
 
+import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.enums.RequestStatus;
 import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.models.Session;
 import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.QuestionRepository;
+import com.example.telegrambotapi.repositories.SelectionRepository;
 import com.example.telegrambotapi.repositories.SessionRepository;
 import com.example.telegrambotapi.services.interfaces.DataService;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
@@ -27,16 +29,19 @@ public class DataServiceImpl implements DataService {
     private QuestionRepository repository;
     private RequestService requestService;
     private SessionRepository redisRepository;
+    private SelectionRepository selectionRepository;
     private RabbitmqService rabbitmqService;
 
     public DataServiceImpl(QuestionRepository repository,
                            SessionRepository redisRepository,
                            RabbitmqService rabbitmqService,
-                           RequestService requestService){
+                           RequestService requestService,
+                           SelectionRepository selectionRepository){
         this.repository = repository;
         this.redisRepository = redisRepository;
         this.rabbitmqService = rabbitmqService;
         this.requestService = requestService;
+        this.selectionRepository = selectionRepository;
     }
 
     /**
@@ -61,7 +66,22 @@ public class DataServiceImpl implements DataService {
         Session session = redisRepository.find(clientId);
         requestService.save(session);
         rabbitmqService.sendToPollQueue(session);
-        redisRepository.delete(clientId);
+        session.getData().clear();
+        redisRepository.save(session);
+//        redisRepository.delete(clientId);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     */
+    @Override
+    public void completePoll(Integer clientId) {
+        SelectedOfferDto selectedOffer = selectionRepository.find(clientId);
+        Session session = redisRepository.find(clientId);
+        selectedOffer.setPhoneNumber(session.getData().get("phone"));
+        rabbitmqService.sendToSelectionQueue(selectedOffer);
+        stopActivePoll(clientId);
     }
 
     /**
@@ -154,24 +174,23 @@ public class DataServiceImpl implements DataService {
         return redisRepository.find(clientId).getUserLanguage();
     }
 
-//    /**
-//     * {@inheritDoc}
-//     * @param id
-//     */
-//    @Override
-//    public void setQuestions(String id) {
-//        Map<Integer, Question> questionMap = new HashMap<>();
-//        repository.findAll().stream().forEach(q -> questionMap.put(q.getId(), q));
-//        questions.put(id, questionMap);
-//    }
-//
-//    /**
-//     * {@inheritDoc}
-//     * @param id
-//     * @return
-//     */
-//    @Override
-//    public Map<Integer, Question> getQuestion(String id) {
-//        return questions.get(id);
-//    }
+
+    /**
+     * {@inheritDoc}
+     * @param offer
+     */
+    @Override
+    public void setSelectedOffer(SelectedOfferDto offer){
+        selectionRepository.save(offer);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @param clientId
+     * @return
+     */
+    @Override
+    public SelectedOfferDto getSelectedOffer(Integer clientId){
+        return selectionRepository.find(clientId);
+    }
 }

@@ -1,6 +1,6 @@
 package com.example.telegrambotapi.services;
 import com.example.telegrambotapi.bot.TourBot;
-import com.example.telegrambotapi.enums.ActionType;
+import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.enums.RequestStatus;
 import com.example.telegrambotapi.models.QuestionBag;
 import com.example.telegrambotapi.models.entities.Offer;
@@ -8,16 +8,14 @@ import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.OfferRepository;
 import com.example.telegrambotapi.repositories.RequestRepository;
+import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.TourService;
 import com.example.telegrambotapi.services.interfaces.DataService;
 import lombok.SneakyThrows;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
-import org.springframework.util.ResourceUtils;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -25,7 +23,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -41,6 +38,7 @@ public class TourServiceImpl implements TourService {
     private QuestionBag questionBag;
     private RequestRepository requestRepository;
     private OfferRepository offerRepository;
+    private RabbitmqService rabbitmqService;
     private TourBot bot;
 
 
@@ -48,22 +46,30 @@ public class TourServiceImpl implements TourService {
                            QuestionBag questionBag,
                            RequestRepository requestRepository,
                            OfferRepository offerRepository,
+                           RabbitmqService rabbitmqService,
                            @Lazy TourBot bot){
         this.service = service;
         this.questionBag = questionBag;
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
+        this.rabbitmqService = rabbitmqService;
         this.bot = bot;
     }
 
     @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
+        if (update.getMessage() != null && !update.getMessage().hasText()){
+            return null;
+        }
         if (update.hasCallbackQuery())
         {
             return handleCallBackQuery(update);
         }
         Message message = update.getMessage();
+        if (message.isReply()){
+            return handleReplyMessage(message);
+        }
         if (message.getText().startsWith("/")){
             return handleCommands(message);
         }
@@ -81,6 +87,7 @@ public class TourServiceImpl implements TourService {
                     .setReplyMarkup(getButtons(message, question));
         }
         if (questionBag.isLast(question)) service.endPoll(message.getFrom().getId());
+        if (questionBag.isEnding(question)) service.completePoll(message.getFrom().getId());
         return sendMessage;
     }
 
@@ -138,6 +145,23 @@ public class TourServiceImpl implements TourService {
         return null;
     }
 
+    private BotApiMethod<?> handleReplyMessage(Message message){
+        if (message.getText().equals("yes")){
+            Offer offer = offerRepository.getByMessageId
+                    (message.getReplyToMessage().getMessageId());
+            SelectedOfferDto selectedOffer = SelectedOfferDto.builder()
+                    .clientId(message.getFrom().getId())
+                    .name(message.getFrom().getFirstName())
+                    .surname(message.getFrom().getLastName())
+                    .username(message.getFrom().getUserName())
+                    .uuid(offer.getUuid())
+                    .agentId(offer.getAgentId()).build();
+            service.setSelectedOffer(selectedOffer);
+            return giveQuestion(message, questionBag.getPhoneQuestion());
+        }
+        return null;
+    }
+
     @SneakyThrows
     private void loadNextOffers(Integer clientId) {
         List<Request> requests = requestRepository.findByClientId(clientId);
@@ -166,7 +190,8 @@ public class TourServiceImpl implements TourService {
     }
 
     private void sendOffer(Offer offer){
-        bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
+        Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
+        offer.setMessageId(message.getMessageId());
         offer.setIsSent(true);
         offerRepository.save(offer);
     }

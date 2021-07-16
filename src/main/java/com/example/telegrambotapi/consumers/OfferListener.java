@@ -9,6 +9,7 @@ import com.example.telegrambotapi.repositories.RequestRepository;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -36,9 +37,10 @@ public class OfferListener {
         Request request = requestRepository.getRequestByUuid(offer.getUuid());
         if (request == null) return; //TODO
         Offer newOffer = Offer.builder().uuid(offer.getUuid())
-                .path(offer.getPath()).isSent(false).request(request).build();
-
-        if (request.getHasNext() && request.getOffers().size() % 5 == 0){
+                .path(offer.getPath()).agentId(offer.getAgentId())
+                .isSent(false).request(request).build();
+        if (request.getHasNext()  && request.getOffers().size() > 0 &&
+                request.getOffers().size() % 5 == 0){
             request.setHasNext(false);
 
             List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
@@ -54,7 +56,8 @@ public class OfferListener {
                     .setReplyMarkup(inlineKeyboardMarkup));
         }
         if (request.getHasNext()){
-            bot.sendPhoto(request.getChatId(), offer.getPath());
+            Message message = bot.sendPhoto(request.getChatId(), offer.getPath());
+            newOffer.setMessageId(message.getMessageId());
             newOffer.setIsSent(true);
         }
         requestRepository.save(request);
