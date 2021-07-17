@@ -32,12 +32,10 @@ public class Request {
             fetch = FetchType.EAGER,
             cascade = CascadeType.ALL)
     private List<Offer> offers;
-    @Column(name = "has_next", columnDefinition = "boolean default true")
-    private Boolean hasNext;
 
     public List<Offer> getNextNotSentRequests(){
         return this.offers.stream().filter(o -> o.getIsSent() == null ||
-                !o.getIsSent()).limit(5).collect(Collectors.toList());
+                !o.getIsSent()).collect(Collectors.toList());
     }
 
 }
