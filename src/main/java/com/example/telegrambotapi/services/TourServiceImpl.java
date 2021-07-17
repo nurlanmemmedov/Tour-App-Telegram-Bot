@@ -180,8 +180,10 @@ public class TourServiceImpl implements TourService {
         requestRepository.save(activeRequest);
     }
 
+
+    @Override
     @SneakyThrows
-    private void sendOffer(Offer offer){
+    public void sendOffer(Offer offer){
         if (sentOfferRepository.find(offer.getRequest().getId()) == 5){
             List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton()
@@ -194,12 +196,13 @@ public class TourServiceImpl implements TourService {
             inlineKeyboardMarkup.setKeyboard(rowList);
             bot.execute(new SendMessage(offer.getRequest().getChatId(), "Do you want to load new Messages?")
                     .setReplyMarkup(inlineKeyboardMarkup));
-            return;
         }
-        Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
-        offer.setMessageId(message.getMessageId());
-        offer.setIsSent(true);
-        offerRepository.save(offer);
+        else if(sentOfferRepository.find(offer.getRequest().getId()) < 5){
+            Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
+            offer.setMessageId(message.getMessageId());
+            offer.setIsSent(true);
+            offerRepository.save(offer);
+        }
         sentOfferRepository.save(offer.getRequest().getId());
     }
 
