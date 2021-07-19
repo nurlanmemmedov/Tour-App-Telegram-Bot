@@ -7,7 +7,8 @@ public class Validator {
     public static boolean validate(Question question, String text){
         if (question == null) return false;
         if (question.getRegex() == null) return true;
-            boolean hasButton = question.getActions().stream()
+        if (question.getActions() == null) return false;
+            Boolean hasButton = question.getActions().stream()
                 .anyMatch(a -> a.getType() == ActionType.BUTTON);
         if (hasButton){
             return  question.getActions()

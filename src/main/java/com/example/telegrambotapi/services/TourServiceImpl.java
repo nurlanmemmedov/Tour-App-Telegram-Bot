@@ -12,6 +12,7 @@ import com.example.telegrambotapi.repositories.redis.SentOfferRepository;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.TourService;
 import com.example.telegrambotapi.services.interfaces.DataService;
+import com.example.telegrambotapi.utils.Translator;
 import lombok.SneakyThrows;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -84,10 +85,12 @@ public class TourServiceImpl implements TourService {
     private BotApiMethod<?> giveQuestion(Message message, Question question){
         String chatId = message.getChatId().toString();
         service.setCurrentQuestion(message.getFrom().getId(), question);
-        SendMessage sendMessage = new SendMessage(chatId, question.getQuestionText(service.getSelectedLanguage(message.getFrom().getId())));
+        SendMessage sendMessage = new SendMessage(chatId,
+                Translator.getQuestion(question, service.getSelectedLanguage(message.getFrom().getId())));
 
         if (questionBag.hasButton(question)){
-            sendMessage = new SendMessage(chatId, question.getQuestionText(service.getSelectedLanguage(message.getFrom().getId())))
+            sendMessage = new SendMessage(chatId,
+                    Translator.getQuestion(question, service.getSelectedLanguage(message.getFrom().getId())))
                     .setReplyMarkup(getButtons(message, question));
         }
         if (questionBag.isLast(question)) service.endPoll(message.getFrom().getId());
@@ -100,7 +103,7 @@ public class TourServiceImpl implements TourService {
         question.getActions().stream().forEach(a -> {
             KeyboardRow row = new KeyboardRow();
             KeyboardButton button = new KeyboardButton()
-                    .setText(a.getAnswer(service.getSelectedLanguage(message.getFrom().getId())));
+                    .setText(Translator.getAction(a, service.getSelectedLanguage(message.getFrom().getId())));
             row.add(button);
             keyboardButtonsRow.add(row);
         });

@@ -4,6 +4,7 @@ import com.example.telegrambotapi.enums.ActionType;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.LazyCollection;
@@ -15,6 +16,7 @@ import java.util.List;
 
 @Entity
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "actions")
@@ -40,12 +42,4 @@ public class Action implements Serializable {
     @OneToMany(mappedBy = "action",
             cascade = CascadeType.ALL)
     private List<ActionTranslation> actionTranslations;
-
-    public String getAnswer(String code) {
-        ActionTranslation translation =  actionTranslations.stream()
-                .filter(t -> t.getCode().equals(code))
-                .findFirst().orElse(null);
-        if (translation == null) return this.answer;
-        return translation.getText();
-    }
 }
