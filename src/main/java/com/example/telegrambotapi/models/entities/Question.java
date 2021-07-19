@@ -2,6 +2,7 @@ package com.example.telegrambotapi.models.entities;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.LazyCollection;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @Entity
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "questions")
@@ -40,13 +42,5 @@ public class Question implements Serializable {
     @OneToMany(mappedBy = "question",
             cascade = CascadeType.ALL)
     private List<QuestionTranslation> questionTranslations;
-
-    public String getQuestionText(String code) {
-        QuestionTranslation translation =  questionTranslations.stream()
-                .filter(t -> t.getCode().equals(code))
-                .findFirst().orElse(null);
-        if (translation == null) return this.questionText;
-        return translation.getText();
-    }
 }
 
