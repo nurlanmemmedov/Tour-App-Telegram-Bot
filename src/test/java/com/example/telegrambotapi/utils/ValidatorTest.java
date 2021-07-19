@@ -20,6 +20,6 @@ public class ValidatorTest {
         Question question = Question.builder().questionKey("test")
                 .questionText("test").regex("[0-9]+")
                 .actions(actions).build();
-        Assertions.assertFalse(Validator.validate(question, "123a"));
+        Assertions.assertFalse(Validator.validateQuestion(question, "123a"));
     }
 }

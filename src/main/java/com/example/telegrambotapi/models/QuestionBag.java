@@ -34,7 +34,7 @@ public class QuestionBag {
         if (hasButton(question)){
             Action action = question.getActions()
                             .stream().filter(a ->
-                            (a.getAnswer().equals(message.getText()) || a.getActionTranslations()
+                            (a.getAnswer().equals(message.getText()) || a.getTranslations()
                                     .stream().anyMatch(t -> t.getText().equals(message.getText()))
                             )).findFirst().orElse(null);
             if (action == null) return null;

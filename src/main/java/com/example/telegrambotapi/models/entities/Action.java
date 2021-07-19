@@ -41,5 +41,5 @@ public class Action implements Serializable {
     @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "action",
             cascade = CascadeType.ALL)
-    private List<ActionTranslation> actionTranslations;
+    private List<Translation> translations;
 }

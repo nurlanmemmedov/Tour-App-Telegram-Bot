@@ -64,9 +64,8 @@ public class TourServiceImpl implements TourService {
     @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
-        if (update.getMessage() != null && !update.getMessage().hasText()){
-            return null;
-        }
+
+        if (!validateMessage(update.getMessage())) return null;
         if (update.hasCallbackQuery())
         {
             return handleCallBackQuery(update);
@@ -138,7 +137,7 @@ public class TourServiceImpl implements TourService {
             return new SendMessage(chatId, "Please type /start to start");
         }
         Question question = service.getCurrentQuestion(clientId);
-        if (!validate(question, message.getText())) return new SendMessage(chatId, "Incorrect answer");
+        if (!validateQuestion(question, message.getText())) return new SendMessage(chatId, "Incorrect answer");
         if (questionBag.isFirst(question)) service.setSelectedLanguage(clientId, message.getText());
         service.saveUserData(clientId, question.getQuestionKey(), message.getText());
         return giveQuestion(message, questionBag.getNext(question, message));
