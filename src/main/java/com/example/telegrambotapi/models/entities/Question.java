@@ -41,6 +41,6 @@ public class Question implements Serializable {
     @LazyCollection(LazyCollectionOption.FALSE)
     @OneToMany(mappedBy = "question",
             cascade = CascadeType.ALL)
-    private List<QuestionTranslation> questionTranslations;
+    private List<Translation> translations;
 }
 

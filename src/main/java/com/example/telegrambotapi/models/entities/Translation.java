@@ -14,16 +14,25 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ActionTranslation implements Serializable {
+public class Translation implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @JsonManagedReference
     @ManyToOne
-    @JoinColumn(name="action_id", nullable=false)
+    @JoinColumn(name="action_id")
     private Action action;
-    private String code;
+
+    @JsonManagedReference
+    @ManyToOne
+    @JoinColumn(name="question_id")
+    private Question question;
+
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
+    @JoinColumn(name = "language_id", referencedColumnName = "id")
+    private Language language;
+
     private String text;
 }
 
