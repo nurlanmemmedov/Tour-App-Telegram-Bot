@@ -1,5 +1,6 @@
 package com.example.telegrambotapi.services;
 
+import com.example.telegrambotapi.dtos.RequestDto;
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.enums.RequestStatus;
 import com.example.telegrambotapi.models.entities.Question;
@@ -12,6 +13,7 @@ import com.example.telegrambotapi.services.interfaces.DataService;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.util.HashMap;
@@ -50,6 +52,7 @@ public class DataServiceImpl implements DataService {
      */
     @Override
     public void createSession(Message message){
+        System.out.println("CREATE SESSION");
         Session session = Session.builder()
                 .uuid(UUID.randomUUID().toString())
                 .chatId(message.getChatId())
@@ -64,11 +67,10 @@ public class DataServiceImpl implements DataService {
     @Override
     public void endPoll(Integer clientId){
         Session session = redisRepository.find(clientId);
-        requestService.save(session);
-        rabbitmqService.sendToPollQueue(session);
+        requestService.create(session);
+        rabbitmqService.sendToPollQueue(new RequestDto(session));
         session.getData().clear();
         redisRepository.save(session);
-//        redisRepository.delete(clientId);
     }
 
     /**
@@ -77,11 +79,12 @@ public class DataServiceImpl implements DataService {
      */
     @Override
     public void completePoll(Integer clientId) {
+        System.out.println("COMPLETE POLL");
         SelectedOfferDto selectedOffer = selectionRepository.find(clientId);
         Session session = redisRepository.find(clientId);
-        selectedOffer.setPhoneNumber(session.getData().get("phone"));
+        selectedOffer.setContactInfo(session.getData().get("phone"));
         rabbitmqService.sendToSelectionQueue(selectedOffer);
-        stopActivePoll(clientId);
+        disableActivePoll(clientId);
     }
 
     /**
@@ -132,22 +135,36 @@ public class DataServiceImpl implements DataService {
      */
     @Override
     public Boolean hasActiveSession(Integer clientId){
-         return (redisRepository.find(clientId) != null
-                 || requestService.findByClientId(clientId).stream()
-                 .anyMatch(r -> r.getStatus() == RequestStatus.ACTIVE));
+         return redisRepository.find(clientId) != null;
+    }
+
+    @Transactional
+    @Override
+    public void disableActivePoll(Integer clientId){
+        System.out.println("DISABLE");
+        redisRepository.delete(clientId);
+        List<Request> requests = requestService.findByClientId(clientId);
+        requests.stream().filter(r -> r.getStatus() != RequestStatus.STOPPED)
+                .forEach(r -> {
+                    r.setIsActive(false);
+                    requestService.save(r);
+                });
     }
 
     /**
      * {@inheritDoc}
      * @param clientId
      */
+    @Transactional
     @Override
     public void stopActivePoll(Integer clientId){
+        System.out.println("STOP");
         redisRepository.delete(clientId);
         List<Request> requests = requestService.findByClientId(clientId);
         requests.stream().filter(r -> r.getStatus() != RequestStatus.STOPPED)
                 .forEach(r -> {
-                    requestService.changeStatusByClientId(r.getId(), RequestStatus.STOPPED);
+                    r.setIsActive(false);
+                    requestService.save(r);
                     rabbitmqService.sendToStopQueue(r.getUuid());
                 });
     }

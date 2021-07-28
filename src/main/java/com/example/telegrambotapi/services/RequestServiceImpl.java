@@ -27,12 +27,22 @@ public class RequestServiceImpl implements RequestService {
      * @param session
      */
     @Override
-    public void save(Session session) {
+    public void create(Session session) {
         Request request = Request.builder().clientId(session.getClientId())
                 .uuid(session.getUuid())
                 .chatId(session.getChatId())
-                .status(RequestStatus.ACTIVE).build();
+                .isActive(true).build();
         repository.save(request);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @param request
+     * @return
+     */
+    @Override
+    public Request save(Request request) {
+        return repository.save(request);
     }
 
     /**
@@ -43,6 +53,16 @@ public class RequestServiceImpl implements RequestService {
     @Override
     public List<Request> findByClientId(Integer clientId) {
         return repository.findByClientId(clientId);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @param uuid
+     * @return
+     */
+    @Override
+    public Request getByUuid(String uuid) {
+        return repository.getRequestByUuid(uuid);
     }
 
     /**

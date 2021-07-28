@@ -1,6 +1,7 @@
 package com.example.telegrambotapi.services;
 
 import com.example.telegrambotapi.configs.RabbitmqConfig;
+import com.example.telegrambotapi.dtos.RequestDto;
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.models.Session;
 import com.example.telegrambotapi.models.entities.Offer;
@@ -22,7 +23,7 @@ public class RabbitmqServiceImpl implements RabbitmqService {
      * @param session
      */
     @Override
-    public void sendToPollQueue(Session session){
+    public void sendToPollQueue(RequestDto session){
         template.convertAndSend(RabbitmqConfig.QUEUE, session);
     }
 

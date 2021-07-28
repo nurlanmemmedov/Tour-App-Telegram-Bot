@@ -12,7 +12,7 @@ public class SelectedOfferDto implements Serializable {
     private String name;
     private String surname;
     private String username;
-    private String phoneNumber;
+    private String contactInfo;
     private String uuid;
-    private Integer agentId;
+    private Integer offerId;
 }

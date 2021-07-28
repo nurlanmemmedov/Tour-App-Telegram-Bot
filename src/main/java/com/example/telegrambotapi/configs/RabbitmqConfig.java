@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitmqConfig {
     public static final String QUEUE = "poll";
     public static final String STOPQUEUE = "stop";
+    public static final String EXPIREDQUEUE = "expired";
     public static final String OFFERQUEUE = "offer";
     public static final String SELECTIONQUEUE = "selection";
     public static final String EXCHANGE = "tour_exchange";
@@ -40,6 +41,11 @@ public class RabbitmqConfig {
     }
 
     @Bean
+    public Queue expiredQueue() {
+        return new Queue(EXPIREDQUEUE);
+    }
+
+    @Bean
     public TopicExchange exchange() {
         return new TopicExchange(EXCHANGE);
     }
@@ -60,4 +66,5 @@ public class RabbitmqConfig {
         rabbitTemplate.setMessageConverter(converter());
         return rabbitTemplate;
     }
+
 }

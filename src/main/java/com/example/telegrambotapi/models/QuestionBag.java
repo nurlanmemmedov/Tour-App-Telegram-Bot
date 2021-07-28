@@ -27,7 +27,7 @@ public class QuestionBag {
     public void init(){
         this.questions = repository.findAll();
         this.firstQuestion = repository.getQuestionByQuestionKey("language");
-        this.phoneQuestion = repository.getQuestionByQuestionKey("askPhone");
+        this.phoneQuestion = repository.getQuestionByQuestionKey("phone");
     }
 
     public Question getNext(Question question, Message message){
