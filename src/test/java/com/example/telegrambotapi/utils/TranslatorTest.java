@@ -13,9 +13,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 class TranslatorTest {
+
     @Test
-    @DisplayName("Test should pass when question translation is equals to hello in english")
-    void getQuestion(){
+    @DisplayName("Translator get question - Az")
+    void getQuestionAz(){
+        List<Action> actions = new ArrayList<>();
+        List<Translation> translations = new ArrayList<>();
+        actions.add(Action.builder().type(ActionType.TEXT).answer("text").build());
+        Question question = Question.builder().questionKey("test")
+                .questionText("salam").regex(".*")
+                .actions(actions).translations(translations).build();
+        Assertions.assertEquals(Translator.getQuestion(question, "Az"), "salam");
+    }
+
+
+    @Test
+    @DisplayName("Translator get question - En")
+    void getQuestionEn(){
         List<Action> actions = new ArrayList<>();
         List<Translation> translations = new ArrayList<>();
         actions.add(Action.builder().type(ActionType.TEXT).answer("text").build());
@@ -27,15 +41,51 @@ class TranslatorTest {
         Assertions.assertEquals(Translator.getQuestion(question, "En"), "hello");
     }
 
+
     @Test
-    @DisplayName("Test should pass when action translation is equals to hello in english")
-    void getAction(){
+    @DisplayName("Translator get question - Ru")
+    void getQuestionRu(){
+        List<Action> actions = new ArrayList<>();
+        List<Translation> translations = new ArrayList<>();
+        actions.add(Action.builder().type(ActionType.TEXT).answer("text").build());
+        translations.add(Translation.builder().language(Language.builder()
+                .code("Ru").build()).text("Привет").build());
+        Question question = Question.builder().questionKey("test")
+                .questionText("salam").regex(".*")
+                .actions(actions).translations(translations).build();
+        Assertions.assertEquals(Translator.getQuestion(question, "Ru"), "Привет");
+    }
+
+    @Test
+    @DisplayName("Translator get action - Az")
+    void getActionAz(){
+        List<Translation> translations = new ArrayList<>();
+        Action action = Action.builder().answer("cavab")
+                .translations(translations).build();
+        Assertions.assertEquals(Translator.getAction(action, "Az"), "cavab");
+    }
+
+    @Test
+    @DisplayName("Translator get action - En")
+    void getActionEn(){
         List<Translation> translations = new ArrayList<>();
         translations.add(Translation.builder().language(Language.builder()
-                .code("En").build()).text("hello").build());
+                .code("En").build()).text("answer").build());
         Action action = Action.builder().answer("test")
                 .translations(translations).build();
-        Assertions.assertEquals(Translator.getAction(action, "En"), "hello");
+        Assertions.assertEquals(Translator.getAction(action, "En"), "answer");
+    }
+
+
+    @Test
+    @DisplayName("Translator get action - Ru")
+    void getActionRu(){
+        List<Translation> translations = new ArrayList<>();
+        translations.add(Translation.builder().language(Language.builder()
+                .code("Ru").build()).text("отвечать").build());
+        Action action = Action.builder().answer("test")
+                .translations(translations).build();
+        Assertions.assertEquals(Translator.getAction(action, "Ru"), "отвечать");
     }
 
 }
