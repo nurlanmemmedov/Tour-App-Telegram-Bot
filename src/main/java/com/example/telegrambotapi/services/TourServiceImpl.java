@@ -174,7 +174,7 @@ public class TourServiceImpl implements TourService {
     private void loadNextOffers(Integer clientId) {
         List<Request> requests = requestRepository.findByClientId(clientId);
         Request activeRequest = requests.stream()
-                .filter(r -> r.getStatus() == RequestStatus.ACTIVE).findFirst().orElse(null);
+                .filter(r -> r.getIsActive()).findFirst().orElse(null);
         if (activeRequest == null) return; //TODO
         sentOfferRepository.delete(activeRequest.getId());
         activeRequest.getNextNotSentRequests().stream().forEach(o -> {
@@ -202,7 +202,7 @@ public class TourServiceImpl implements TourService {
                     .setReplyMarkup(inlineKeyboardMarkup));
         }
         else if(sentOfferRepository.find(offer.getRequest().getId()) < 5){
-            Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
+            Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getImage());
             offer.setMessageId(message.getMessageId());
             offer.setIsSent(true);
             offerRepository.save(offer);

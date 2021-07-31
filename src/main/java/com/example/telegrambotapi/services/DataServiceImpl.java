@@ -52,7 +52,6 @@ public class DataServiceImpl implements DataService {
      */
     @Override
     public void createSession(Message message){
-        System.out.println("CREATE SESSION");
         Session session = Session.builder()
                 .uuid(UUID.randomUUID().toString())
                 .chatId(message.getChatId())
@@ -141,10 +140,9 @@ public class DataServiceImpl implements DataService {
     @Transactional
     @Override
     public void disableActivePoll(Integer clientId){
-        System.out.println("DISABLE");
         redisRepository.delete(clientId);
         List<Request> requests = requestService.findByClientId(clientId);
-        requests.stream().filter(r -> r.getStatus() != RequestStatus.STOPPED)
+        requests.stream().filter(r -> r.getIsActive())
                 .forEach(r -> {
                     r.setIsActive(false);
                     requestService.save(r);
@@ -158,10 +156,9 @@ public class DataServiceImpl implements DataService {
     @Transactional
     @Override
     public void stopActivePoll(Integer clientId){
-        System.out.println("STOP");
         redisRepository.delete(clientId);
         List<Request> requests = requestService.findByClientId(clientId);
-        requests.stream().filter(r -> r.getStatus() != RequestStatus.STOPPED)
+        requests.stream().filter(r -> r.getIsActive() == null || r.getIsActive())
                 .forEach(r -> {
                     r.setIsActive(false);
                     requestService.save(r);

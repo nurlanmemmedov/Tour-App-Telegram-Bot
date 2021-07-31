@@ -34,7 +34,7 @@ public class OfferListener {
         Request request = requestRepository.getRequestByUuid(offer.getUuid());
         if (request == null) return; //TODO
         Offer newOffer = Offer.builder().uuid(offer.getUuid())
-                .path(offer.getPath()).offerId(offer.getOfferId())
+                .image(offer.getImage()).offerId(offer.getOfferId())
                 .isSent(false).request(request).build();
         requestRepository.save(request);
         repository.save(newOffer);

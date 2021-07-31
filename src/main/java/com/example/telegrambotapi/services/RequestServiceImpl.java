@@ -64,16 +64,4 @@ public class RequestServiceImpl implements RequestService {
     public Request getByUuid(String uuid) {
         return repository.getRequestByUuid(uuid);
     }
-
-    /**
-     * {@inheritDoc}
-     * @param id
-     * @param status
-     */
-    @Override
-    public void changeStatusByClientId(Integer id, RequestStatus status){
-        Request request = repository.getById(id);
-        request.setStatus(status);
-        repository.save(request);
-    }
 }

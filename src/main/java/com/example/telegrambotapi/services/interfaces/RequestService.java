@@ -38,11 +38,4 @@ public interface RequestService {
      * @return
      */
     Request getByUuid(String uuid);
-
-    /**
-     * changes status of request by given id
-     * @param id
-     * @param status
-     */
-    void changeStatusByClientId(Integer id, RequestStatus status);
 }
