@@ -185,6 +185,7 @@ public class DataServiceImpl implements DataService {
      */
     @Override
     public String getSelectedLanguage(Integer clientId){
+        if (redisRepository.find(clientId) == null) return null;
         return redisRepository.find(clientId).getUserLanguage();
     }
 

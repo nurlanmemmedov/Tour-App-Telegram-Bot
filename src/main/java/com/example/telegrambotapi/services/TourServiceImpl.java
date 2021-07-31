@@ -12,6 +12,7 @@ import com.example.telegrambotapi.repositories.redis.SentOfferRepository;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.TourService;
 import com.example.telegrambotapi.services.interfaces.DataService;
+import com.example.telegrambotapi.utils.Messager;
 import com.example.telegrambotapi.utils.Translator;
 import lombok.SneakyThrows;
 import org.springframework.context.annotation.Lazy;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static com.example.telegrambotapi.utils.Messager.*;
 import static com.example.telegrambotapi.utils.Validator.*;
 
 @Component
@@ -41,7 +43,6 @@ public class TourServiceImpl implements TourService {
     private RequestRepository requestRepository;
     private OfferRepository offerRepository;
     private SentOfferRepository sentOfferRepository;
-    private RabbitmqService rabbitmqService;
     private TourBot bot;
 
 
@@ -49,14 +50,12 @@ public class TourServiceImpl implements TourService {
                            QuestionBag questionBag,
                            RequestRepository requestRepository,
                            OfferRepository offerRepository,
-                           RabbitmqService rabbitmqService,
                            SentOfferRepository sentOfferRepository,
                            @Lazy TourBot bot){
         this.service = service;
         this.questionBag = questionBag;
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
-        this.rabbitmqService = rabbitmqService;
         this.sentOfferRepository = sentOfferRepository;
         this.bot = bot;
     }
@@ -70,7 +69,8 @@ public class TourServiceImpl implements TourService {
             return handleCommands(message);
         }
         if (!service.hasActiveSession(update.getMessage().getFrom().getId())){
-            return new SendMessage(update.getMessage().getChatId(), "You don't have active session, please type /start to start");
+            return new SendMessage(update.getMessage().getChatId(),
+                    sessionMessage(service.getSelectedLanguage(update.getMessage().getFrom().getId())));
         }
         if (message.isReply()){
             return handleReplyMessage(message);
@@ -119,16 +119,17 @@ public class TourServiceImpl implements TourService {
         Integer clientId = message.getFrom().getId();
         if (message.getText().equals("/start")){
             if (service.hasActiveSession(clientId)){
-                return new SendMessage(chatId, "You have active session, please type /stop to restart");
+                return new SendMessage(chatId, activeSessionMessage(service.getSelectedLanguage(clientId)));
             }
             service.createSession(message);
             return giveQuestion(message, questionBag.getFirstQuestion());
         }
         else if (message.getText().equals("/stop")){
+            String lang = service.getSelectedLanguage(clientId);
             service.stopActivePoll(clientId);
-            return new SendMessage(chatId, "Your session was removed, you can restart with typing /start");
+            return new SendMessage(chatId, Messager.stopMessage(lang));
         }
-        return new SendMessage(chatId, "Incorrect command");
+        return new SendMessage(chatId, incorrectCommand(service.getSelectedLanguage(clientId)));
     }
 
     private BotApiMethod<?> handleMessage(Message message){
@@ -136,10 +137,12 @@ public class TourServiceImpl implements TourService {
         String chatId = message.getChatId().toString();
 
         if (!service.hasActiveSession(clientId)){
-            return new SendMessage(chatId, "Please type /start to start");
+            return new SendMessage(chatId, startMessage(service.getSelectedLanguage(clientId)));
         }
         Question question = service.getCurrentQuestion(clientId);
-        if (!validateQuestion(question, message.getText())) return new SendMessage(chatId, "Incorrect answer");
+        if (!validateQuestion(question, message.getText())){
+            return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId)));
+        }
         if (questionBag.isFirst(question)) service.setSelectedLanguage(clientId, message.getText());
         service.saveUserData(clientId, question.getQuestionKey(), message.getText());
         return giveQuestion(message, questionBag.getNext(question, message));
@@ -191,14 +194,15 @@ public class TourServiceImpl implements TourService {
         if (sentOfferRepository.find(offer.getRequest().getId()) == 5){
             List<InlineKeyboardButton> keyboardButtonsRow= new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton()
-                    .setText("Load..");
+                    .setText(loadOfferAction(service.getSelectedLanguage(offer.getRequest().getClientId())));
             button.setCallbackData("load");
             keyboardButtonsRow.add(button);
             InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
             rowList.add(keyboardButtonsRow);
             inlineKeyboardMarkup.setKeyboard(rowList);
-            bot.execute(new SendMessage(offer.getRequest().getChatId(), "Do you want to load new Messages?")
+            bot.execute(new SendMessage(offer.getRequest().getChatId(), loadOfferQuestion(service
+                    .getSelectedLanguage(offer.getRequest().getClientId())))
                     .setReplyMarkup(inlineKeyboardMarkup));
         }
         else if(sentOfferRepository.find(offer.getRequest().getId()) < 5){
