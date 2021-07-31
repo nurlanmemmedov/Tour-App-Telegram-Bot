@@ -64,18 +64,20 @@ public class TourServiceImpl implements TourService {
     @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
-
         if (!validateMessage(update.getMessage())) return null;
-        if (update.hasCallbackQuery())
-        {
-            return handleCallBackQuery(update);
-        }
         Message message = update.getMessage();
+        if (message.getText().startsWith("/")){
+            return handleCommands(message);
+        }
+        if (!service.hasActiveSession(update.getMessage().getFrom().getId())){
+            return new SendMessage(update.getMessage().getChatId(), "You don't have active session, please type /start to start");
+        }
         if (message.isReply()){
             return handleReplyMessage(message);
         }
-        if (message.getText().startsWith("/")){
-            return handleCommands(message);
+        if (update.hasCallbackQuery())
+        {
+            return handleCallBackQuery(update);
         }
         return handleMessage(message);
     }
@@ -161,7 +163,7 @@ public class TourServiceImpl implements TourService {
                     .surname(message.getFrom().getLastName())
                     .username(message.getFrom().getUserName())
                     .uuid(offer.getUuid())
-                    .agentId(offer.getAgentId()).build();
+                    .offerId(offer.getOfferId()).build();
             service.setSelectedOffer(selectedOffer);
             return giveQuestion(message, questionBag.getPhoneQuestion());
         }
@@ -172,7 +174,7 @@ public class TourServiceImpl implements TourService {
     private void loadNextOffers(Integer clientId) {
         List<Request> requests = requestRepository.findByClientId(clientId);
         Request activeRequest = requests.stream()
-                .filter(r -> r.getStatus() == RequestStatus.ACTIVE).findFirst().orElse(null);
+                .filter(r -> r.getIsActive()).findFirst().orElse(null);
         if (activeRequest == null) return; //TODO
         sentOfferRepository.delete(activeRequest.getId());
         activeRequest.getNextNotSentRequests().stream().forEach(o -> {
@@ -200,7 +202,7 @@ public class TourServiceImpl implements TourService {
                     .setReplyMarkup(inlineKeyboardMarkup));
         }
         else if(sentOfferRepository.find(offer.getRequest().getId()) < 5){
-            Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getPath());
+            Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getImage());
             offer.setMessageId(message.getMessageId());
             offer.setIsSent(true);
             offerRepository.save(offer);

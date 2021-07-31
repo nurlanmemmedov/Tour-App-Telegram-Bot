@@ -13,10 +13,17 @@ import java.util.List;
 public interface RequestService {
 
     /**
-     * saves request to database by given session
+     * creates request from given session
      * @param session
      */
-    void save(Session session);
+    void create(Session session);
+
+    /**
+     * saves request
+     * @param request
+     * @return
+     */
+    Request save(Request request);
 
     /**
      * finds requests by given client id
@@ -26,9 +33,9 @@ public interface RequestService {
     List<Request> findByClientId(Integer clientId);
 
     /**
-     * changes status of request by given id
-     * @param id
-     * @param status
+     * gets request by uuid
+     * @param uuid
+     * @return
      */
-    void changeStatusByClientId(Integer id, RequestStatus status);
+    Request getByUuid(String uuid);
 }

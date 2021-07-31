@@ -1,7 +1,6 @@
 package com.example.telegrambotapi.enums;
 
 public enum RequestStatus {
-    ACTIVE,
+    NEW,
     SENT,
-    STOPPED
 }

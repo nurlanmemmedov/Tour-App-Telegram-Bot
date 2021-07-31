@@ -19,9 +19,9 @@ public class Offer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private String uuid;
-    private String path;
+    private byte[] image;
     private Integer messageId;
-    private Integer agentId;
+    private Integer offerId;
 
     @JsonBackReference
     @ManyToOne(targetEntity = Request.class, fetch = FetchType.EAGER)

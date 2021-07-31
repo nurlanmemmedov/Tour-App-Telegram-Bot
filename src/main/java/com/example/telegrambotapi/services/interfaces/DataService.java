@@ -60,6 +60,12 @@ public interface DataService {
     Boolean hasActiveSession(Integer clientIdd);
 
     /**
+     * disable active poll
+     * @param clientId
+     */
+    void disableActivePoll(Integer clientId);
+
+    /**
      * stops the user's active poll
      * @param clientId
      */

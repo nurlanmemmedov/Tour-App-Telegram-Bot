@@ -1,5 +1,6 @@
 package com.example.telegrambotapi.services.interfaces;
 
+import com.example.telegrambotapi.dtos.RequestDto;
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.models.Session;
 import com.example.telegrambotapi.models.entities.Offer;
@@ -12,7 +13,7 @@ public interface RabbitmqService {
      * pushes Session object to poll queue in rabbitmq
      * @param session
      */
-    void sendToPollQueue(Session session);
+    void sendToPollQueue(RequestDto session);
 
     /**
      * pushes uuid to stop queue in rabbitmq

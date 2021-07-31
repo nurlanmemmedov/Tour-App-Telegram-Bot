@@ -25,7 +25,9 @@ public class Request {
     private String uuid;
     private Integer clientId;
     private Long chatId;
-    private RequestStatus status;
+
+    @Column(name = "is_active")
+    private Boolean isActive;
 
     @JsonManagedReference
     @OneToMany(mappedBy = "request",

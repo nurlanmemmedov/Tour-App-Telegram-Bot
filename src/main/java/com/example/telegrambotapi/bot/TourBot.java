@@ -62,11 +62,9 @@ public class TourBot extends TelegramWebhookBot {
     }
 
     @SneakyThrows
-    public Message sendPhoto(Long chatId, String imagePath) {
-        URL url = new URL(imagePath);
-        File file = new File("filename.jpg");
-        FileUtils.copyURLToFile(url, file);
-        SendPhoto sendPhoto = new SendPhoto().setPhoto(file);
+    public Message sendPhoto(Long chatId, byte[] image) {
+        FileUtils.writeByteArrayToFile(new File("filename.jpg"), image);
+        SendPhoto sendPhoto = new SendPhoto().setPhoto(new File("filename.jpg"));
         sendPhoto.setChatId(chatId);
         return execute(sendPhoto);
     }
