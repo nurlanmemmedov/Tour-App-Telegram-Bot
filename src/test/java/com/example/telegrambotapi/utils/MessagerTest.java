@@ -205,4 +205,28 @@ class MessagerTest {
         Assertions.assertEquals(Messager.loadOfferAction(null), "Yüklə...");
     }
 
+    @Test
+    @DisplayName("expireMessage -> Az")
+    void expireMessageAz(){
+        Assertions.assertEquals(Messager.expireMessage("Az"), "Sizin sessiyanızın müddəti bitdi, Yeni anketə başlamaq üçün /start komandasını daxil edin.");
+    }
+
+    @Test
+    @DisplayName("expireMessage -> En")
+    void expireMessageEn(){
+        Assertions.assertEquals(Messager.expireMessage("En"), "Your session was expired, type /start to start a new survey");
+    }
+
+    @Test
+    @DisplayName("expireMessage -> Ru")
+    void expireMessageRu(){
+        Assertions.assertEquals(Messager.expireMessage("Ru"), "Срок действия вашей сессии истек, введите /start, чтобы начать новый опрос");
+    }
+
+    @Test
+    @DisplayName("expireMessage -> Null")
+    void expireMessageNull(){
+        Assertions.assertEquals(Messager.expireMessage(null), "Sizin sessiyanızın müddəti bitdi, Yeni anketə başlamaq üçün /start komandasını daxil edin.");
+    }
+
 }

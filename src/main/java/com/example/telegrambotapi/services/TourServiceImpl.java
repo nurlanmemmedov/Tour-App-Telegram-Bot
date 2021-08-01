@@ -141,7 +141,8 @@ public class TourServiceImpl implements TourService {
         }
         Question question = service.getCurrentQuestion(clientId);
         if (!validateQuestion(question, message.getText())){
-            return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId)));
+            return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId))
+            + "  " + Translator.getQuestion(question, service.getSelectedLanguage(clientId)));
         }
         if (questionBag.isFirst(question)) service.setSelectedLanguage(clientId, message.getText());
         service.saveUserData(clientId, question.getQuestionKey(), message.getText());

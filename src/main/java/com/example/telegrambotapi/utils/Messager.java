@@ -29,6 +29,13 @@ public class Messager {
         return "Sizin sessiyanız silindi, yenidən başlamaq üçün /start komandasını daxil edin";
     }
 
+    public static String expireMessage(String languageCode){
+        if (languageCode == null) return "Sizin sessiyanızın müddəti bitdi, Yeni anketə başlamaq üçün /start komandasını daxil edin.";
+        if (languageCode.equals("En")) return "Your session was expired, type /start to start a new survey";
+        if (languageCode.equals("Ru")) return "Срок действия вашей сессии истек, введите /start, чтобы начать новый опрос";
+        return "Sizin sessiyanızın müddəti bitdi, Yeni anketə başlamaq üçün /start komandasını daxil edin.";
+    }
+
     public static String activeSessionMessage(String languageCode){
         if (languageCode == null) return "Sizin aktiv sessiyanız var, yenidən başlamaq üçün ilk öncə /stop komandasını daxil edin";
         if (languageCode.equals("En")) return "You have active session, please first type /stop to restart";
