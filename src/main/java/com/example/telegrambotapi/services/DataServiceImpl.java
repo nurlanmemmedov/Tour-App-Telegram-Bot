@@ -12,6 +12,7 @@ import com.example.telegrambotapi.repositories.redis.SessionRepository;
 import com.example.telegrambotapi.services.interfaces.DataService;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
+import com.pengrad.telegrambot.request.SendMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -78,7 +79,6 @@ public class DataServiceImpl implements DataService {
      */
     @Override
     public void completePoll(Integer clientId) {
-        System.out.println("COMPLETE POLL");
         SelectedOfferDto selectedOffer = selectionRepository.find(clientId);
         Session session = redisRepository.find(clientId);
         selectedOffer.setContactInfo(session.getData().get("phone"));
