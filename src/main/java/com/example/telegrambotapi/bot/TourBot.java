@@ -15,6 +15,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import java.io.File;
 import java.net.URL;
 
+import static com.example.telegrambotapi.utils.Messager.offerCaption;
+
 public class TourBot extends TelegramWebhookBot {
 
     String botToken;
@@ -62,9 +64,10 @@ public class TourBot extends TelegramWebhookBot {
     }
 
     @SneakyThrows
-    public Message sendPhoto(Long chatId, byte[] image) {
+    public Message sendPhoto(Long chatId, byte[] image, String languageCode) {
         FileUtils.writeByteArrayToFile(new File("filename.jpg"), image);
         SendPhoto sendPhoto = new SendPhoto().setPhoto(new File("filename.jpg"));
+        sendPhoto.setCaption(offerCaption(languageCode));
         sendPhoto.setChatId(chatId);
         return execute(sendPhoto);
     }

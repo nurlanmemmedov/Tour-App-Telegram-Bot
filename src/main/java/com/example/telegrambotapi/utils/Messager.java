@@ -50,6 +50,13 @@ public class Messager {
         return "Sizin aktiv sessiyanız yoxdur, zəhmət olmasa başlamaq üçün /start komandasını daxil edin";
     }
 
+    public static String offerCaption(String languageCode){
+        if (languageCode == null) return "Təklifi seçmək üçün şəkilə reply edib, 'yes' daxil edin";
+        if (languageCode.equals("En")) return "To select an offer, reply to the image and enter 'yes'";
+        if (languageCode.equals("Ru")) return "Чтобы выбрать предложение, ответьте на изображение и введите 'yes'";
+        return "Təklifi seçmək üçün şəkilə reply edib, 'yes' daxil edin";
+    }
+
     public static String loadOfferQuestion(String languageCode){
         if (languageCode == null) return "Yeni təkliflər görmək istəyirsinizmi?";
         if (languageCode.equals("En")) return "Do you want to load new offers?";

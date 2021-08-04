@@ -229,4 +229,30 @@ class MessagerTest {
         Assertions.assertEquals(Messager.expireMessage(null), "Sizin sessiyanızın müddəti bitdi, Yeni anketə başlamaq üçün /start komandasını daxil edin.");
     }
 
+
+    @Test
+    @DisplayName("offerCaption -> Az")
+    void offerCaptionAz(){
+        Assertions.assertEquals(Messager.offerCaption("Az"), "Təklifi seçmək üçün şəkilə reply edib, 'yes' daxil edin");
+    }
+
+    @Test
+    @DisplayName("offerCaption -> En")
+    void offerCaptionEn(){
+        Assertions.assertEquals(Messager.offerCaption("En"), "To select an offer, reply to the image and enter 'yes'");
+    }
+
+    @Test
+    @DisplayName("offerCaption -> Ru")
+    void offerCaptionRu(){
+        Assertions.assertEquals(Messager.offerCaption("Ru"), "Чтобы выбрать предложение, ответьте на изображение и введите 'yes'");
+    }
+
+    @Test
+    @DisplayName("offerCaption -> Null")
+    void offerCaptionNull(){
+        Assertions.assertEquals(Messager.offerCaption(null), "Təklifi seçmək üçün şəkilə reply edib, 'yes' daxil edin");
+    }
+
+
 }
