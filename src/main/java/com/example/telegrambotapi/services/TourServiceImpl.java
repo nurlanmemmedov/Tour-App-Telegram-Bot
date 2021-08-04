@@ -15,10 +15,12 @@ import com.example.telegrambotapi.services.interfaces.DataService;
 import com.example.telegrambotapi.utils.Messager;
 import com.example.telegrambotapi.utils.Translator;
 import lombok.SneakyThrows;
+import org.apache.commons.io.FileUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -63,7 +65,11 @@ public class TourServiceImpl implements TourService {
     @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
-        if (!validateMessage(update.getMessage())) return null;
+        if (!validateMessage(update.getMessage()) && !update.hasCallbackQuery()) return null;
+        if (update.hasCallbackQuery())
+        {
+            return handleCallBackQuery(update);
+        }
         Message message = update.getMessage();
         if (message.getText().startsWith("/")){
             return handleCommands(message);
@@ -75,10 +81,7 @@ public class TourServiceImpl implements TourService {
         if (message.isReply()){
             return handleReplyMessage(message);
         }
-        if (update.hasCallbackQuery())
-        {
-            return handleCallBackQuery(update);
-        }
+
         return handleMessage(message);
     }
 
@@ -140,6 +143,7 @@ public class TourServiceImpl implements TourService {
             return new SendMessage(chatId, startMessage(service.getSelectedLanguage(clientId)));
         }
         Question question = service.getCurrentQuestion(clientId);
+        if (question == null || question.getQuestionKey().equals("last")) return null;
         if (!validateQuestion(question, message.getText())){
             return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId))
             + "  " + Translator.getQuestion(question, service.getSelectedLanguage(clientId)));
@@ -158,7 +162,8 @@ public class TourServiceImpl implements TourService {
     }
 
     private BotApiMethod<?> handleReplyMessage(Message message){
-        if (message.getText().equals("yes")){
+        if (message.getText().equals("yes") || message.getText().equals("Yes") ||  message.getText().equals("Ok")
+            ||  message.getText().equals("Okay")){
             Offer offer = offerRepository.getByMessageId
                     (message.getReplyToMessage().getMessageId());
             SelectedOfferDto selectedOffer = SelectedOfferDto.builder()
@@ -207,7 +212,7 @@ public class TourServiceImpl implements TourService {
                     .setReplyMarkup(inlineKeyboardMarkup));
         }
         else if(sentOfferRepository.find(offer.getRequest().getId()) < 5){
-            Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getImage());
+            Message message = bot.sendPhoto(offer.getRequest().getChatId(), offer.getImage(), service.getSelectedLanguage(offer.getRequest().getClientId()));
             offer.setMessageId(message.getMessageId());
             offer.setIsSent(true);
             offerRepository.save(offer);
