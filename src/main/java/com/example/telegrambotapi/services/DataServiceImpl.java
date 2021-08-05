@@ -1,5 +1,6 @@
 package com.example.telegrambotapi.services;
 
+import com.example.telegrambotapi.bot.TourBot;
 import com.example.telegrambotapi.dtos.RequestDto;
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.enums.RequestStatus;
@@ -12,15 +13,22 @@ import com.example.telegrambotapi.repositories.redis.SessionRepository;
 import com.example.telegrambotapi.services.interfaces.DataService;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
-import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.TelegramBot;
+import lombok.SneakyThrows;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import static com.example.telegrambotapi.utils.Messager.expireMessage;
+import static com.example.telegrambotapi.utils.Messager.selectionMessage;
 
 /**
  * this class implements CacheService
@@ -34,17 +42,20 @@ public class DataServiceImpl implements DataService {
     private SessionRepository redisRepository;
     private SelectionRepository selectionRepository;
     private RabbitmqService rabbitmqService;
+    private TourBot bot;
 
     public DataServiceImpl(QuestionRepository repository,
                            SessionRepository redisRepository,
                            RabbitmqService rabbitmqService,
                            RequestService requestService,
-                           SelectionRepository selectionRepository){
+                           SelectionRepository selectionRepository,
+                           @Lazy TourBot bot){
         this.repository = repository;
         this.redisRepository = redisRepository;
         this.rabbitmqService = rabbitmqService;
         this.requestService = requestService;
         this.selectionRepository = selectionRepository;
+        this.bot = bot;
     }
 
     /**
@@ -78,12 +89,13 @@ public class DataServiceImpl implements DataService {
      * @param clientId
      */
     @Override
-    public void completePoll(Integer clientId) {
+    public BotApiMethod<?> sendSelection(Integer clientId) {
         SelectedOfferDto selectedOffer = selectionRepository.find(clientId);
         Session session = redisRepository.find(clientId);
         selectedOffer.setContactInfo(session.getData().get("phone"));
         rabbitmqService.sendToSelectionQueue(selectedOffer);
-        disableActivePoll(clientId);
+        return new SendMessage(session.getChatId(), selectionMessage(getSelectedLanguage(clientId)));
+//        disableActivePoll(clientId);
     }
 
     /**
@@ -141,12 +153,21 @@ public class DataServiceImpl implements DataService {
     @Override
     public void disableActivePoll(Integer clientId){
         redisRepository.delete(clientId);
+        selectionRepository.delete(clientId);
         List<Request> requests = requestService.findByClientId(clientId);
         requests.stream().filter(r -> r.getIsActive())
                 .forEach(r -> {
                     r.setIsActive(false);
                     requestService.save(r);
                 });
+    }
+
+    @Override
+    @SneakyThrows
+    public void expireActivePoll(Request request) {
+        String lang = getSelectedLanguage(request.getClientId());
+        disableActivePoll(request.getClientId());
+        bot.execute(new SendMessage(request.getChatId(), expireMessage(lang)));
     }
 
     /**
@@ -157,6 +178,7 @@ public class DataServiceImpl implements DataService {
     @Override
     public void stopActivePoll(Integer clientId){
         redisRepository.delete(clientId);
+        selectionRepository.delete(clientId);
         List<Request> requests = requestService.findByClientId(clientId);
         requests.stream().filter(r -> r.getIsActive() == null || r.getIsActive())
                 .forEach(r -> {

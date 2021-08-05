@@ -57,6 +57,13 @@ public class Messager {
         return "Təklifi seçmək üçün şəkilə reply edib, 'yes' daxil edin";
     }
 
+    public static String selectionMessage(String languageCode){
+        if (languageCode == null) return "Əla, Seçiminiz uğurla göndərildi";
+        if (languageCode.equals("En")) return "Excellent, Your Selection was sent successfully";
+        if (languageCode.equals("Ru")) return "Отлично, ваш выбор был успешно отправлен";
+        return "Əla, Seçiminiz uğurla göndərildi";
+    }
+
     public static String loadOfferQuestion(String languageCode){
         if (languageCode == null) return "Yeni təkliflər görmək istəyirsinizmi?";
         if (languageCode.equals("En")) return "Do you want to load new offers?";

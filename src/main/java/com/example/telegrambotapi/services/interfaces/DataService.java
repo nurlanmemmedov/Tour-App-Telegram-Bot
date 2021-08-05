@@ -2,6 +2,8 @@ package com.example.telegrambotapi.services.interfaces;
 
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.models.entities.Question;
+import com.example.telegrambotapi.models.entities.Request;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.util.Map;
@@ -28,7 +30,7 @@ public interface DataService {
      * completes poll
      * @param clientId
      */
-    void completePoll(Integer clientId);
+    BotApiMethod<?> sendSelection(Integer clientId);
 
     /**
      * sets current question to user's session
@@ -64,6 +66,12 @@ public interface DataService {
      * @param clientId
      */
     void disableActivePoll(Integer clientId);
+
+    /**
+     * expires active poll
+     * @param request
+     */
+    void expireActivePoll(Request request);
 
     /**
      * stops the user's active poll

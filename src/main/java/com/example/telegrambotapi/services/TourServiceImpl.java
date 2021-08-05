@@ -91,14 +91,13 @@ public class TourServiceImpl implements TourService {
         service.setCurrentQuestion(message.getFrom().getId(), question);
         SendMessage sendMessage = new SendMessage(chatId,
                 Translator.getQuestion(question, service.getSelectedLanguage(message.getFrom().getId())));
-
         if (questionBag.hasButton(question)){
             sendMessage = new SendMessage(chatId,
                     Translator.getQuestion(question, service.getSelectedLanguage(message.getFrom().getId())))
                     .setReplyMarkup(getButtons(message, question));
         }
         if (questionBag.isLast(question)) service.endPoll(message.getFrom().getId());
-        if (questionBag.isEnding(question)) service.completePoll(message.getFrom().getId());
+        if (questionBag.isEnding(question)) return service.sendSelection(message.getFrom().getId());
         return sendMessage;
     }
 
@@ -164,16 +163,19 @@ public class TourServiceImpl implements TourService {
     private BotApiMethod<?> handleReplyMessage(Message message){
         if (message.getText().equals("yes") || message.getText().equals("Yes") ||  message.getText().equals("Ok")
             ||  message.getText().equals("Okay")){
+            Integer clientId = message.getFrom().getId();
+            Boolean hasAnySelection = service.getSelectedOffer(clientId) != null;
+            System.out.println(hasAnySelection);
             Offer offer = offerRepository.getByMessageId
                     (message.getReplyToMessage().getMessageId());
             SelectedOfferDto selectedOffer = SelectedOfferDto.builder()
-                    .clientId(message.getFrom().getId())
-                    .name(message.getFrom().getFirstName())
-                    .surname(message.getFrom().getLastName())
-                    .username(message.getFrom().getUserName())
-                    .uuid(offer.getUuid())
-                    .offerId(offer.getOfferId()).build();
+                    .clientId(clientId).name(message.getFrom().getFirstName())
+                    .surname(message.getFrom().getLastName()).username(message.getFrom().getUserName())
+                    .uuid(offer.getUuid()).offerId(offer.getOfferId()).build();
             service.setSelectedOffer(selectedOffer);
+            if (hasAnySelection){
+                return service.sendSelection(clientId);
+            }
             return giveQuestion(message, questionBag.getPhoneQuestion());
         }
         return null;
@@ -189,7 +191,6 @@ public class TourServiceImpl implements TourService {
         activeRequest.getNextNotSentRequests().stream().forEach(o -> {
             sendOffer(o);
         });
-
         requestRepository.save(activeRequest);
     }
 
