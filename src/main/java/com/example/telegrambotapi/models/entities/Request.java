@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,7 @@ public class Request {
     private String uuid;
     private Integer clientId;
     private Long chatId;
+    private LocalDateTime expireDate;
 
     @Column(name = "is_active")
     private Boolean isActive;

@@ -8,11 +8,15 @@ import com.example.telegrambotapi.services.DataServiceImpl;
 import com.example.telegrambotapi.services.interfaces.DataService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 import static com.example.telegrambotapi.utils.Messager.expireMessage;
 
@@ -22,6 +26,8 @@ public class ExpiredRequestListener {
     private RequestService service;
     private DataService dataService;
     private TourBot bot;
+    @Value("${selection.deadline}")
+    private Integer deadline;
 
     public ExpiredRequestListener(RequestService service, DataService dataService,@Lazy TourBot bot){
         this.service = service;
@@ -31,14 +37,16 @@ public class ExpiredRequestListener {
 
     @Transactional
     @RabbitListener(queues = RabbitmqConfig.EXPIREDQUEUE)
-    public void expiredRequestListener(String uuid) throws TelegramApiException {
+    public void expiredRequestListener(String uuid) {
         try {
             Request request = service.getByUuid(uuid);
             if (request.getIsActive()){
-                String lang = dataService.getSelectedLanguage(request.getClientId());
-                dataService.disableActivePoll(request.getClientId());
-                bot.execute(new SendMessage(request.getChatId(),
-                        expireMessage(lang)));
+                if (request.getOffers().size() > 0){
+                    request.setExpireDate(LocalDateTime.now().plusHours(deadline));
+                    service.save(request);
+                    return;
+                }
+                dataService.expireActivePoll(request);
             }
         }catch (Exception e){
         }
