@@ -12,15 +12,20 @@ import com.example.telegrambotapi.repositories.redis.SentOfferRepository;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.TourService;
 import com.example.telegrambotapi.services.interfaces.DataService;
+import com.example.telegrambotapi.utils.Calendar;
 import com.example.telegrambotapi.utils.Messager;
 import com.example.telegrambotapi.utils.Translator;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.joda.time.LocalDate;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -28,12 +33,14 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static com.example.telegrambotapi.utils.Calendar.generateKeyboard;
 import static com.example.telegrambotapi.utils.Messager.*;
 import static com.example.telegrambotapi.utils.Validator.*;
 
@@ -86,27 +93,24 @@ public class TourServiceImpl implements TourService {
     }
 
     @SneakyThrows
-    private BotApiMethod<?> giveQuestion(Message message, Question question){
-        String chatId = message.getChatId().toString();
-        service.setCurrentQuestion(message.getFrom().getId(), question);
-        SendMessage sendMessage = new SendMessage(chatId,
-                Translator.getQuestion(question, service.getSelectedLanguage(message.getFrom().getId())));
-        if (questionBag.hasButton(question)){
-            sendMessage = new SendMessage(chatId,
-                    Translator.getQuestion(question, service.getSelectedLanguage(message.getFrom().getId())))
-                    .setReplyMarkup(getButtons(message, question));
-        }
-        if (questionBag.isLast(question)) service.endPoll(message.getFrom().getId());
-        if (questionBag.isEnding(question)) return service.sendSelection(message.getFrom().getId());
+    private BotApiMethod<?> giveQuestion(String chatId, Integer clientId,Question question, String extraMessage){
+        service.setCurrentQuestion(clientId, question);
+        String questionText = Translator.getQuestion(question, service.getSelectedLanguage(clientId));
+        if (extraMessage != null) questionText = extraMessage + " "+ questionText;
+        SendMessage sendMessage = new SendMessage(chatId, questionText);
+        if (questionBag.isDate(question))sendMessage.setReplyMarkup(generateKeyboard(LocalDate.now()));
+        if (questionBag.hasButton(question))sendMessage.setReplyMarkup(getButtons(clientId, question));
+        if (questionBag.isLast(question)) service.endPoll(clientId);
+        if (questionBag.isEnding(question)) return service.sendSelection(clientId);
         return sendMessage;
     }
 
-    private ReplyKeyboardMarkup getButtons(Message message, Question question){
+    private ReplyKeyboardMarkup getButtons(Integer clientId, Question question){
         List<KeyboardRow> keyboardButtonsRow= new ArrayList<>();
         question.getActions().stream().forEach(a -> {
             KeyboardRow row = new KeyboardRow();
             KeyboardButton button = new KeyboardButton()
-                    .setText(Translator.getAction(a, service.getSelectedLanguage(message.getFrom().getId())));
+                    .setText(Translator.getAction(a, service.getSelectedLanguage(clientId)));
             row.add(button);
             keyboardButtonsRow.add(row);
         });
@@ -124,7 +128,7 @@ public class TourServiceImpl implements TourService {
                 return new SendMessage(chatId, activeSessionMessage(service.getSelectedLanguage(clientId)));
             }
             service.createSession(message);
-            return giveQuestion(message, questionBag.getFirstQuestion());
+            return giveQuestion(chatId, clientId, questionBag.getFirstQuestion(), null);
         }
         else if (message.getText().equals("/stop")){
             String lang = service.getSelectedLanguage(clientId);
@@ -137,33 +141,79 @@ public class TourServiceImpl implements TourService {
     private BotApiMethod<?> handleMessage(Message message){
         Integer clientId = message.getFrom().getId();
         String chatId = message.getChatId().toString();
+        String answer = message.getText();
+        return handleAnswer(message.getMessageId(), chatId, clientId, answer);
+    }
 
+    @SneakyThrows
+    private BotApiMethod<?> handleCallBackQuery(Update update){
+        Integer clientId = update.getCallbackQuery().getFrom().getId();
+        Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
+        String chatId = update.getCallbackQuery().getMessage().getChatId().toString();
+        String answer = update.getCallbackQuery().getData();
+        if(answer.equals("load")){
+            loadNextOffers(clientId);
+            return null;
+        }
+        else if (answer.equals("<") || answer.equals(">")){
+            handleCalendar(messageId, update.getCallbackQuery().getInlineMessageId(), chatId, clientId, answer);
+            return null;
+        }
+        Question question = service.getCurrentQuestion(clientId);
+        if (question == null || question.getQuestionKey().equals("last")) return null;
+        if (!validateQuestion(question, answer)){
+            return new AnswerCallbackQuery().setShowAlert(true).setText(incorrectAnswer(null))
+                    .setCallbackQueryId(update.getCallbackQuery().getId());}
+        if (questionBag.isDate(question)){
+            bot.execute(new DeleteMessage(chatId, messageId));
+            bot.execute(new SendMessage(chatId, question.getQuestionText()));
+            bot.execute(new SendMessage(chatId, answer));
+        }
+        return giveQuestion(chatId, clientId, questionBag.getNext(question, answer), null);
+    }
+
+    @SneakyThrows
+    private BotApiMethod<?> handleAnswer(Integer messageId, String chatId, Integer clientId, String answer){
         if (!service.hasActiveSession(clientId)){
             return new SendMessage(chatId, startMessage(service.getSelectedLanguage(clientId)));
         }
         Question question = service.getCurrentQuestion(clientId);
         if (question == null || question.getQuestionKey().equals("last")) return null;
-        if (!validateQuestion(question, message.getText())){
-            return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId))
-            + "  " + Translator.getQuestion(question, service.getSelectedLanguage(clientId)));
+        if (questionBag.isDate(question)) return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId)));
+        if (!validateQuestion(question, answer)){
+            return giveQuestion(chatId, clientId, question, incorrectAnswer(service.getSelectedLanguage(clientId)));
         }
-        if (questionBag.isFirst(question)) service.setSelectedLanguage(clientId, message.getText());
-        service.saveUserData(clientId, question.getQuestionKey(), message.getText());
-        return giveQuestion(message, questionBag.getNext(question, message));
+        if (questionBag.isFirst(question)) service.setSelectedLanguage(clientId, answer);
+        service.saveUserData(clientId, question.getQuestionKey(), answer);
+        return giveQuestion(chatId, clientId, questionBag.getNext(question, answer), null);
     }
 
-    private BotApiMethod<?> handleCallBackQuery(Update update){
-        Integer clientId = update.getCallbackQuery().getFrom().getId();
-        if(update.getCallbackQuery().getData().equals("load")){
-            loadNextOffers(clientId);
+    @SneakyThrows
+    private void handleCalendar(Integer messageId, String inlineId, String chatId,Integer clientId, String answer){
+        if (!service.hasActiveSession(clientId)){
+            bot.execute(new SendMessage(chatId, startMessage(service.getSelectedLanguage(clientId))));
         }
-        return null;
+        Question question = service.getCurrentQuestion(clientId);
+        LocalDate currentDate = service.getCalendarMonth(clientId);
+        if (!(questionBag.isDate(question))) return;
+        if (answer.equals(">")){
+            currentDate = currentDate.plusMonths(1);
+        }else if(answer.equals("<")){
+            currentDate =currentDate.minusMonths(1);
+        }
+        try{
+            bot.execute(new EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId)
+                    .setInlineMessageId(inlineId).setReplyMarkup(generateKeyboard(currentDate)));
+        }catch (TelegramApiRequestException e){
+        }
+        service.setCalendarMonth(clientId, currentDate);
     }
 
     private BotApiMethod<?> handleReplyMessage(Message message){
         if (message.getText().equals("yes") || message.getText().equals("Yes") ||  message.getText().equals("Ok")
             ||  message.getText().equals("Okay")){
             Integer clientId = message.getFrom().getId();
+            String chatId = message.getChatId().toString();
             Boolean hasAnySelection = service.getSelectedOffer(clientId) != null;
             System.out.println(hasAnySelection);
             Offer offer = offerRepository.getByMessageId
@@ -176,7 +226,7 @@ public class TourServiceImpl implements TourService {
             if (hasAnySelection){
                 return service.sendSelection(clientId);
             }
-            return giveQuestion(message, questionBag.getPhoneQuestion());
+            return giveQuestion(chatId, clientId, questionBag.getPhoneQuestion(), null);
         }
         return null;
     }

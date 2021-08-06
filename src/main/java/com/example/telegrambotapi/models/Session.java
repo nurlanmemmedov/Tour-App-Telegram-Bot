@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.joda.time.LocalDate;
 
 import java.io.Serializable;
 import java.security.Key;
@@ -23,4 +24,5 @@ public class Session implements Serializable {
     private Map<String, String> data;
     private Question currentQuestion;
     private String userLanguage;
+    private LocalDate calendarMonth;
 }

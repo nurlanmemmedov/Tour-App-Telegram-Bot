@@ -30,12 +30,13 @@ public class QuestionBag {
         this.phoneQuestion = repository.getQuestionByQuestionKey("phone");
     }
 
-    public Question getNext(Question question, Message message){
+    public Question getNext(Question question, String answer){
+        System.out.println("NMEXT");
         if (hasButton(question)){
             Action action = question.getActions()
                             .stream().filter(a ->
-                            (a.getAnswer().equals(message.getText()) || a.getTranslations()
-                                    .stream().anyMatch(t -> t.getText().equals(message.getText()))
+                            (a.getAnswer().equals(answer) || a.getTranslations()
+                                    .stream().anyMatch(t -> t.getText().equals(answer))
                             )).findFirst().orElse(null);
             if (action == null) return null;
             return action.getNextQuestion();
@@ -55,6 +56,11 @@ public class QuestionBag {
 
     public Boolean isEnding(Question question){
         return question.getQuestionKey().equals("end");
+    }
+
+    public Boolean isDate(Question question){
+        System.out.println();
+        return (question.getQuestionKey().equals("travelStartDate") || question.getQuestionKey().equals("travelEndDate"));
     }
 
     public Boolean hasButton(Question question){
