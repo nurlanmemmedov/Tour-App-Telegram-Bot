@@ -15,6 +15,7 @@ import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
 import com.pengrad.telegrambot.TelegramBot;
 import lombok.SneakyThrows;
+import org.joda.time.LocalDate;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -230,4 +231,20 @@ public class DataServiceImpl implements DataService {
     public SelectedOfferDto getSelectedOffer(Integer clientId){
         return selectionRepository.find(clientId);
     }
+
+    @Override
+    public LocalDate getCalendarMonth(Integer clientId){
+        Session session = redisRepository.find(clientId);
+        if(session.getCalendarMonth() == null) return LocalDate.now();
+        return session.getCalendarMonth();
+    }
+
+    @Override
+    public void setCalendarMonth(Integer clientId, LocalDate date) {
+        Session session = redisRepository.find(clientId);
+        session.setCalendarMonth(date);
+        redisRepository.save(session);
+    }
+
+
 }

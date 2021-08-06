@@ -3,6 +3,7 @@ package com.example.telegrambotapi.services.interfaces;
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.models.entities.Request;
+import org.joda.time.LocalDate;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
@@ -105,4 +106,18 @@ public interface DataService {
      * @return
      */
     SelectedOfferDto getSelectedOffer(Integer clientId);
+
+    /**
+     * gets month of custom calender
+     * @param clientId
+     * @return
+     */
+    LocalDate getCalendarMonth(Integer clientId);
+
+    /**
+     * sets month of custom calender
+     * @param clientId
+     * @return
+     */
+    void setCalendarMonth(Integer clientId, LocalDate date);
 }

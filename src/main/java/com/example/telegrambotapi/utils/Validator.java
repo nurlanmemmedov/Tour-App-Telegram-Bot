@@ -35,14 +35,16 @@ public class Validator {
         boolean result = text.matches(question.getRegex());
         if (!result) return false;
         if(question.getQuestionKey().equals("travelStartDate")
-                || question.getQuestionKey().equals("travelEndDate")){ result = validateDate(text);}
+                || question.getQuestionKey().equals("travelEndDate")){
+            result = validateDate(text);
+        }
         return result;
     }
 
 
     static boolean validateDate(String text){
         try {
-            DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd");
             LocalDate date = LocalDate.parse(text, format);
             if (date.isBefore(LocalDate.now())){
                 return false;
