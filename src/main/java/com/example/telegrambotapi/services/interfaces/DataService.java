@@ -83,9 +83,9 @@ public interface DataService {
     /**
      * sets the selected language to user's session
      * @param clientId
-     * @param code
+     * @param language
      */
-    void setSelectedLanguage(Integer clientId, String code);
+    void setSelectedLanguage(Integer clientId, String language);
 
     /**
      * gets the user's selected language
