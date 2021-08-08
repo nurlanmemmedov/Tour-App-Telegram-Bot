@@ -1,8 +1,5 @@
 package com.example.telegrambotapi.utils;
 
-import com.example.telegrambotapi.models.KeyboardButton;
-import com.google.gson.Gson;
-
 import java.text.SimpleDateFormat;
 
 import org.joda.time.LocalDate;

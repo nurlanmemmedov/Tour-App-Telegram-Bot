@@ -169,6 +169,7 @@ public class TourServiceImpl implements TourService {
             bot.execute(new SendMessage(chatId, question.getQuestionText()));
             bot.execute(new SendMessage(chatId, answer));
         }
+        service.saveUserData(clientId, question.getQuestionKey(), answer);
         return giveQuestion(chatId, clientId, questionBag.getNext(question, answer), null);
     }
 
@@ -196,8 +197,7 @@ public class TourServiceImpl implements TourService {
             Integer clientId = message.getFrom().getId();
             String chatId = message.getChatId().toString();
             Boolean hasAnySelection = service.getSelectedOffer(clientId) != null;
-            Offer offer = offerRepository.getByMessageId
-                    (message.getReplyToMessage().getMessageId());
+            Offer offer = offerRepository.getByMessageId(message.getReplyToMessage().getMessageId());
             SelectedOfferDto selectedOffer = SelectedOfferDto.builder().clientId(clientId)
                             .name(message.getFrom().getFirstName()).surname(message.getFrom()
                             .getLastName()).username(message.getFrom().getUserName())
@@ -214,7 +214,11 @@ public class TourServiceImpl implements TourService {
         List<Request> requests = requestRepository.findByClientId(clientId);
         Request activeRequest = requests.stream()
                 .filter(r -> r.getIsActive()).findFirst().orElse(null);
-        if (activeRequest == null) return; //TODO
+        System.out.println(activeRequest.getId());
+        if (activeRequest == null){
+            System.out.println("AASFFFFFFFFFFFFFFF");
+            return; //TODO
+        }
         sentOfferRepository.delete(activeRequest.getId());
         activeRequest.getNextNotSentRequests().stream().forEach(o -> {
             sendOffer(o);
