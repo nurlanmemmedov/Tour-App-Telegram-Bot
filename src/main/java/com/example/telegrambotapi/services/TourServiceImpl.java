@@ -166,7 +166,7 @@ public class TourServiceImpl implements TourService {
                     .setCallbackQueryId(update.getCallbackQuery().getId());}
         if (questionBag.isDate(question)){
             bot.execute(new DeleteMessage(chatId, messageId));
-            bot.execute(new SendMessage(chatId, question.getQuestionText()));
+            bot.execute(new SendMessage(chatId, Translator.getQuestion(question, service.getSelectedLanguage(clientId))));
             bot.execute(new SendMessage(chatId, answer));
         }
         service.saveUserData(clientId, question.getQuestionKey(), answer);
