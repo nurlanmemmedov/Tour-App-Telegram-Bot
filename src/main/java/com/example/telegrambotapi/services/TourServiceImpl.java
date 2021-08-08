@@ -117,6 +117,7 @@ public class TourServiceImpl implements TourService {
             if (service.hasActiveSession(clientId)){
                 return new SendMessage(chatId, activeSessionMessage(lang));
             }
+            System.out.println(message.getFrom().getFirstName()+message.getFrom().getLastName());
             service.createSession(message);
             return giveQuestion(chatId, clientId, questionBag.getFirstQuestion(), null);
         }
@@ -165,7 +166,10 @@ public class TourServiceImpl implements TourService {
             return new AnswerCallbackQuery().setShowAlert(true).setText(incorrectAnswer(null))
                     .setCallbackQueryId(update.getCallbackQuery().getId());}
         if (questionBag.isDate(question)){
-            bot.execute(new DeleteMessage(chatId, messageId));
+            try {
+                bot.execute(new DeleteMessage(chatId, messageId));
+            }catch (TelegramApiRequestException e){
+            }
             bot.execute(new SendMessage(chatId, Translator.getQuestion(question, service.getSelectedLanguage(clientId))));
             bot.execute(new SendMessage(chatId, answer));
         }
