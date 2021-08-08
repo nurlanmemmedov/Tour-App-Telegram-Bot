@@ -31,7 +31,6 @@ public class QuestionBag {
     }
 
     public Question getNext(Question question, String answer){
-        System.out.println("NMEXT");
         if (hasButton(question)){
             Action action = question.getActions()
                             .stream().filter(a ->

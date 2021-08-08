@@ -4,6 +4,7 @@ import com.example.telegrambotapi.bot.TourBot;
 import com.example.telegrambotapi.dtos.RequestDto;
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
 import com.example.telegrambotapi.enums.RequestStatus;
+import com.example.telegrambotapi.models.entities.Language;
 import com.example.telegrambotapi.models.entities.Question;
 import com.example.telegrambotapi.models.Session;
 import com.example.telegrambotapi.models.entities.Request;
@@ -11,6 +12,7 @@ import com.example.telegrambotapi.repositories.QuestionRepository;
 import com.example.telegrambotapi.repositories.redis.SelectionRepository;
 import com.example.telegrambotapi.repositories.redis.SessionRepository;
 import com.example.telegrambotapi.services.interfaces.DataService;
+import com.example.telegrambotapi.services.interfaces.LanguageService;
 import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.RequestService;
 import com.pengrad.telegrambot.TelegramBot;
@@ -43,6 +45,7 @@ public class DataServiceImpl implements DataService {
     private SessionRepository redisRepository;
     private SelectionRepository selectionRepository;
     private RabbitmqService rabbitmqService;
+    private LanguageService langService;
     private TourBot bot;
 
     public DataServiceImpl(QuestionRepository repository,
@@ -50,12 +53,14 @@ public class DataServiceImpl implements DataService {
                            RabbitmqService rabbitmqService,
                            RequestService requestService,
                            SelectionRepository selectionRepository,
+                           LanguageService langService,
                            @Lazy TourBot bot){
         this.repository = repository;
         this.redisRepository = redisRepository;
         this.rabbitmqService = rabbitmqService;
         this.requestService = requestService;
         this.selectionRepository = selectionRepository;
+        this.langService = langService;
         this.bot = bot;
     }
 
@@ -192,10 +197,15 @@ public class DataServiceImpl implements DataService {
     /**
      * {@inheritDoc}
      * @param clientId
-     * @param code
+     * @param language
      */
     @Override
-    public void setSelectedLanguage(Integer clientId, String code){
+    public void setSelectedLanguage(Integer clientId, String language){
+        Language lang = langService.getByName(language);
+        String code = "AZ";
+        if (lang != null){
+            code = lang.getCode();
+        }
         Session session = redisRepository.find(clientId);
         session.setUserLanguage(code);
         redisRepository.save(session);

@@ -1,7 +1,6 @@
 package com.example.telegrambotapi.services;
 import com.example.telegrambotapi.bot.TourBot;
 import com.example.telegrambotapi.dtos.SelectedOfferDto;
-import com.example.telegrambotapi.enums.RequestStatus;
 import com.example.telegrambotapi.models.QuestionBag;
 import com.example.telegrambotapi.models.entities.Offer;
 import com.example.telegrambotapi.models.entities.Question;
@@ -9,21 +8,16 @@ import com.example.telegrambotapi.models.entities.Request;
 import com.example.telegrambotapi.repositories.OfferRepository;
 import com.example.telegrambotapi.repositories.RequestRepository;
 import com.example.telegrambotapi.repositories.redis.SentOfferRepository;
-import com.example.telegrambotapi.services.interfaces.RabbitmqService;
 import com.example.telegrambotapi.services.interfaces.TourService;
 import com.example.telegrambotapi.services.interfaces.DataService;
-import com.example.telegrambotapi.utils.Calendar;
-import com.example.telegrambotapi.utils.Messager;
 import com.example.telegrambotapi.utils.Translator;
 import lombok.SneakyThrows;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.LocalDate;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -35,10 +29,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 
-import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 import static com.example.telegrambotapi.utils.Calendar.generateKeyboard;
 import static com.example.telegrambotapi.utils.Messager.*;
@@ -72,30 +65,24 @@ public class TourServiceImpl implements TourService {
     @Override
     @SneakyThrows
     public BotApiMethod<?> handleUpdate(Update update) {
-        if (!validateMessage(update.getMessage()) && !update.hasCallbackQuery()) return null;
-        if (update.hasCallbackQuery())
-        {
+        if (!validateUpdate(update)) return null;
+        Message message = update.getMessage();
+        if (update.hasCallbackQuery()){
             return handleCallBackQuery(update);
         }
-        Message message = update.getMessage();
         if (message.getText().startsWith("/")){
             return handleCommands(message);
-        }
-        if (!service.hasActiveSession(update.getMessage().getFrom().getId())){
-            return new SendMessage(update.getMessage().getChatId(),
-                    sessionMessage(service.getSelectedLanguage(update.getMessage().getFrom().getId())));
         }
         if (message.isReply()){
             return handleReplyMessage(message);
         }
-
         return handleMessage(message);
     }
 
     @SneakyThrows
     private BotApiMethod<?> giveQuestion(String chatId, Integer clientId,Question question, String extraMessage){
         service.setCurrentQuestion(clientId, question);
-        String questionText = Translator.getQuestion(question, service.getSelectedLanguage(clientId));
+        String questionText = String.format(Translator.getQuestion(question, service.getSelectedLanguage(clientId)));
         if (extraMessage != null) questionText = extraMessage + " "+ questionText;
         SendMessage sendMessage = new SendMessage(chatId, questionText);
         if (questionBag.isDate(question))sendMessage.setReplyMarkup(generateKeyboard(LocalDate.now()));
@@ -107,7 +94,7 @@ public class TourServiceImpl implements TourService {
 
     private ReplyKeyboardMarkup getButtons(Integer clientId, Question question){
         List<KeyboardRow> keyboardButtonsRow= new ArrayList<>();
-        question.getActions().stream().forEach(a -> {
+        question.getActions().stream().sorted(Comparator.comparing(a -> a.getId())).forEach(a -> {
             KeyboardRow row = new KeyboardRow();
             KeyboardButton button = new KeyboardButton()
                     .setText(Translator.getAction(a, service.getSelectedLanguage(clientId)));
@@ -116,6 +103,7 @@ public class TourServiceImpl implements TourService {
         });
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         replyKeyboardMarkup.setOneTimeKeyboard(true);
+        replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setKeyboard(keyboardButtonsRow);
         return replyKeyboardMarkup;
     }
@@ -123,17 +111,21 @@ public class TourServiceImpl implements TourService {
     private BotApiMethod<?> handleCommands(Message message){
         String chatId = message.getChatId().toString();
         Integer clientId = message.getFrom().getId();
+        String lang = service.getSelectedLanguage(clientId);
+
         if (message.getText().equals("/start")){
             if (service.hasActiveSession(clientId)){
-                return new SendMessage(chatId, activeSessionMessage(service.getSelectedLanguage(clientId)));
+                return new SendMessage(chatId, activeSessionMessage(lang));
             }
             service.createSession(message);
             return giveQuestion(chatId, clientId, questionBag.getFirstQuestion(), null);
         }
         else if (message.getText().equals("/stop")){
-            String lang = service.getSelectedLanguage(clientId);
+            if (!service.hasActiveSession(clientId)){
+                return new SendMessage(chatId, sessionMessage(lang));
+            }
             service.stopActivePoll(clientId);
-            return new SendMessage(chatId, Messager.stopMessage(lang));
+            return new SendMessage(chatId, stopMessage(lang));
         }
         return new SendMessage(chatId, incorrectCommand(service.getSelectedLanguage(clientId)));
     }
@@ -142,8 +134,16 @@ public class TourServiceImpl implements TourService {
         Integer clientId = message.getFrom().getId();
         String chatId = message.getChatId().toString();
         String answer = message.getText();
-        return handleAnswer(message.getMessageId(), chatId, clientId, answer);
-    }
+
+        Question question = service.getCurrentQuestion(clientId);
+        if (question == null || question.getQuestionKey().equals("last")) return null;
+        if (questionBag.isDate(question)) return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId)));
+        if (!validateQuestion(question, answer)){
+            return giveQuestion(chatId, clientId, question, incorrectAnswer(service.getSelectedLanguage(clientId)));
+        }
+        if (questionBag.isFirst(question)) service.setSelectedLanguage(clientId, answer);
+        service.saveUserData(clientId, question.getQuestionKey(), answer);
+        return giveQuestion(chatId, clientId, questionBag.getNext(question, answer), null);    }
 
     @SneakyThrows
     private BotApiMethod<?> handleCallBackQuery(Update update){
@@ -169,30 +169,12 @@ public class TourServiceImpl implements TourService {
             bot.execute(new SendMessage(chatId, question.getQuestionText()));
             bot.execute(new SendMessage(chatId, answer));
         }
-        return giveQuestion(chatId, clientId, questionBag.getNext(question, answer), null);
-    }
-
-    @SneakyThrows
-    private BotApiMethod<?> handleAnswer(Integer messageId, String chatId, Integer clientId, String answer){
-        if (!service.hasActiveSession(clientId)){
-            return new SendMessage(chatId, startMessage(service.getSelectedLanguage(clientId)));
-        }
-        Question question = service.getCurrentQuestion(clientId);
-        if (question == null || question.getQuestionKey().equals("last")) return null;
-        if (questionBag.isDate(question)) return new SendMessage(chatId, incorrectAnswer(service.getSelectedLanguage(clientId)));
-        if (!validateQuestion(question, answer)){
-            return giveQuestion(chatId, clientId, question, incorrectAnswer(service.getSelectedLanguage(clientId)));
-        }
-        if (questionBag.isFirst(question)) service.setSelectedLanguage(clientId, answer);
         service.saveUserData(clientId, question.getQuestionKey(), answer);
         return giveQuestion(chatId, clientId, questionBag.getNext(question, answer), null);
     }
 
     @SneakyThrows
     private void handleCalendar(Integer messageId, String inlineId, String chatId,Integer clientId, String answer){
-        if (!service.hasActiveSession(clientId)){
-            bot.execute(new SendMessage(chatId, startMessage(service.getSelectedLanguage(clientId))));
-        }
         Question question = service.getCurrentQuestion(clientId);
         LocalDate currentDate = service.getCalendarMonth(clientId);
         if (!(questionBag.isDate(question))) return;
@@ -215,17 +197,13 @@ public class TourServiceImpl implements TourService {
             Integer clientId = message.getFrom().getId();
             String chatId = message.getChatId().toString();
             Boolean hasAnySelection = service.getSelectedOffer(clientId) != null;
-            System.out.println(hasAnySelection);
-            Offer offer = offerRepository.getByMessageId
-                    (message.getReplyToMessage().getMessageId());
-            SelectedOfferDto selectedOffer = SelectedOfferDto.builder()
-                    .clientId(clientId).name(message.getFrom().getFirstName())
-                    .surname(message.getFrom().getLastName()).username(message.getFrom().getUserName())
-                    .uuid(offer.getUuid()).offerId(offer.getOfferId()).build();
+            Offer offer = offerRepository.getByMessageId(message.getReplyToMessage().getMessageId());
+            SelectedOfferDto selectedOffer = SelectedOfferDto.builder().clientId(clientId)
+                            .name(message.getFrom().getFirstName()).surname(message.getFrom()
+                            .getLastName()).username(message.getFrom().getUserName())
+                            .uuid(offer.getUuid()).offerId(offer.getOfferId()).build();
             service.setSelectedOffer(selectedOffer);
-            if (hasAnySelection){
-                return service.sendSelection(clientId);
-            }
+            if (hasAnySelection)return service.sendSelection(clientId);
             return giveQuestion(chatId, clientId, questionBag.getPhoneQuestion(), null);
         }
         return null;
@@ -236,7 +214,11 @@ public class TourServiceImpl implements TourService {
         List<Request> requests = requestRepository.findByClientId(clientId);
         Request activeRequest = requests.stream()
                 .filter(r -> r.getIsActive()).findFirst().orElse(null);
-        if (activeRequest == null) return; //TODO
+        System.out.println(activeRequest.getId());
+        if (activeRequest == null){
+            System.out.println("AASFFFFFFFFFFFFFFF");
+            return; //TODO
+        }
         sentOfferRepository.delete(activeRequest.getId());
         activeRequest.getNextNotSentRequests().stream().forEach(o -> {
             sendOffer(o);
@@ -269,6 +251,25 @@ public class TourServiceImpl implements TourService {
             offerRepository.save(offer);
         }
         sentOfferRepository.save(offer.getRequest().getId());
+    }
+
+    @SneakyThrows
+    public Boolean validateUpdate(Update update){
+        Integer clientId = null;
+        if (update.hasCallbackQuery()){
+            clientId = update.getCallbackQuery().getFrom().getId();
+        }else if (update.hasMessage()){
+            if (!update.getMessage().hasText())return false;
+            if (update.getMessage().getText().startsWith("/")) return true;
+            clientId = update.getMessage().getFrom().getId();
+        }else {
+            return false;
+        }
+        if (!service.hasActiveSession(clientId)){
+            bot.execute(new SendMessage(clientId.toString(),sessionMessage(service.getSelectedLanguage(clientId))));
+            return false;
+        }
+        return true;
     }
 
 }

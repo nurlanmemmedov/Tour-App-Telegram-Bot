@@ -1,8 +1,5 @@
 package com.example.telegrambotapi.utils;
 
-import com.example.telegrambotapi.models.KeyboardButton;
-import com.google.gson.Gson;
-
 import java.text.SimpleDateFormat;
 
 import org.joda.time.LocalDate;
@@ -16,7 +13,7 @@ public class Calendar {
 
     public static final String IGNORE = "ignore!@#$%^&";
 
-    public static final String[] WD = {"M", "T", "W", "T", "F", "S", "S"};
+    public static final String[] WD = {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"};
 
     public static InlineKeyboardMarkup generateKeyboard(LocalDate date) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -60,7 +57,6 @@ public class Calendar {
     }
 
     private static InlineKeyboardButton createButton(String callBack, String text) {
-
         return new InlineKeyboardButton().setCallbackData(callBack).setText(text);
     }
 
