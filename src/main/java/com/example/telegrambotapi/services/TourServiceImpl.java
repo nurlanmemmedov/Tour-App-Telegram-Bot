@@ -117,7 +117,11 @@ public class TourServiceImpl implements TourService {
             if (service.hasActiveSession(clientId)){
                 return new SendMessage(chatId, activeSessionMessage(lang));
             }
-            System.out.println(message.getFrom().getFirstName()+message.getFrom().getLastName());
+            try{
+                System.out.println(message.getFrom().getFirstName()+message.getFrom().getLastName());
+            }catch (Exception e){
+
+            }
             service.createSession(message);
             return giveQuestion(chatId, clientId, questionBag.getFirstQuestion(), null);
         }
